@@ -72,6 +72,7 @@ export default function EntityLayers() {
                 }
             });
 
+            deadReckoningWorkerRef.current?.postMessage({ type: 'update', flights: payload });
             viewer.scene.requestRender();
         },
         [viewerRef, entityStoreRef, layers.civilian]
@@ -138,10 +139,89 @@ export default function EntityLayers() {
                 }
             });
 
-            viewer.scene.requestRender();
+            deadReckoningWorkerRef.current?.postMessage({ type: 'update', flights: payload });
         },
         [viewerRef, entityStoreRef, layers.military]
     );
+
+    // ==========================
+    // Flight Dead Reckoning Worker
+    // ==========================
+    useEffect(() => {
+        const Cesium = cesiumRef.current;
+        const viewer = viewerRef.current;
+        if (!Cesium || !viewer) return;
+
+        let worker: Worker;
+        try {
+            worker = new Worker(
+                new URL('../../workers/deadReckoning.worker.ts', import.meta.url),
+                { type: 'module' }
+            );
+        } catch (e) {
+            console.warn('Dead reckoning worker not available', e);
+            return;
+        }
+
+        // Handle interpolated positions
+        worker.onmessage = (e) => {
+            if (e.data.type === 'positions') {
+                const storeCiv = entityStoreRef.current.civilianFlights;
+                const storeMil = entityStoreRef.current.militaryFlights;
+
+                e.data.positions.forEach((pos: any) => {
+                    // It could be civilian or military, we check both stores
+                    const entity = storeCiv.get(pos.icao24) || storeMil.get(pos.icao24);
+                    if (entity) {
+                        entity.position = Cesium.Cartesian3.fromDegrees(
+                            pos.lon, pos.lat, pos.alt
+                        ) as any;
+                    }
+                });
+                viewer.scene.requestRender();
+            }
+        };
+
+        const interpolate = () => {
+            if (layers.civilian || layers.military) {
+                worker.postMessage({ type: 'interpolate' });
+            }
+            animFrameRef.current = requestAnimationFrame(interpolate);
+        };
+
+        // Start interpolation loop
+        animFrameRef.current = requestAnimationFrame(interpolate);
+
+        return () => {
+            cancelAnimationFrame(animFrameRef.current);
+            worker.terminate();
+        };
+    }, [viewerRef, entityStoreRef, layers.civilian, layers.military]);
+
+    // Send flight updates to the worker when they arrive
+    const pushToWorker = useCallback(
+        (payload: FlightData[] | MilitaryFlightData[]) => {
+            if (payload && payload.length > 0) {
+                const workerUrl = new URL('../../workers/deadReckoning.worker.ts', import.meta.url);
+                // We can't access the worker instance directly from another hook easily without a ref.
+                // So we update the worker data when the payload arrives.
+            }
+        }, []
+    );
+
+    // Patch the original update handlers to also send to worker via a global or ref
+    const deadReckoningWorkerRef = useRef<Worker | null>(null);
+    useEffect(() => {
+        try {
+            deadReckoningWorkerRef.current = new Worker(
+                new URL('../../workers/deadReckoning.worker.ts', import.meta.url),
+                { type: 'module' }
+            );
+        } catch { }
+        return () => {
+            deadReckoningWorkerRef.current?.terminate();
+        };
+    }, []);
 
     // ==========================
     // Satellite Layer (SGP4 Worker)
