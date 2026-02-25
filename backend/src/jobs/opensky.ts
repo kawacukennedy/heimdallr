@@ -51,12 +51,12 @@ function normalizeAdsbLol(ac: any): FlightState {
         icao24: ac.hex || ac.icao || '',
         callsign: (ac.flight || ac.callsign || '').trim(),
         origin_country: 'Unknown',
-        lon: ac.lon ?? 0,
-        lat: ac.lat ?? 0,
-        alt: ac.alt_baro ?? ac.alt ?? 0,
-        velocity: ac.gs ?? ac.speed ?? 0,
-        heading: ac.track ?? ac.heading ?? 0,
-        vertical_rate: ac.baro_rate ?? 0,
+        lon: Number(ac.lon ?? 0),
+        lat: Number(ac.lat ?? 0),
+        alt: ac.alt_baro === 'ground' ? 0 : Number(ac.alt_baro ?? ac.alt ?? 0),
+        velocity: Number(ac.gs ?? ac.speed ?? 0),
+        heading: Number(ac.track ?? ac.heading ?? 0),
+        vertical_rate: Number(ac.baro_rate ?? 0),
         on_ground: false,
         last_contact: Math.floor(Date.now() / 1000)
     };
