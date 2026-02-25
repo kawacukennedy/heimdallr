@@ -96,6 +96,14 @@ export default function CesiumViewer({ onReady, children }: CesiumViewerProps) {
             } catch (error) {
                 console.warn('Failed to load Google 3D Tiles:', error);
             }
+        } else {
+            // Fallback to open-source OpenStreetMap 3D Buildings if no Google Map Key is provided
+            try {
+                const osmBuildings = await Cesium.createOsmBuildingsAsync();
+                viewer.scene.primitives.add(osmBuildings);
+            } catch (error) {
+                console.warn('Failed to load OSM 3D Buildings fallback:', error);
+            }
         }
 
         // Set initial camera position (global overview)
