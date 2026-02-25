@@ -21,14 +21,7 @@ interface MilitaryFlight {
     category: string;
 }
 
-// Strategic monitoring points
-const MONITORING_COORDS = [
-    { lat: 40, lon: -74, label: 'New York' },
-    { lat: 51, lon: -0.1, label: 'London' },
-    { lat: 35, lon: 139, label: 'Tokyo' },
-    { lat: 38.9, lon: -77, label: 'Washington DC' },
-    { lat: 48.8, lon: 2.3, label: 'Paris' },
-];
+// Fetching globally now from adsb.lol instead of chunking locations
 
 function normalizeADSBFlight(aircraft: any): MilitaryFlight {
     return {
@@ -47,36 +40,27 @@ function normalizeADSBFlight(aircraft: any): MilitaryFlight {
 }
 
 export async function pollADSBExchange(): Promise<void> {
-    if (!env.ADSBX_API_KEY) {
-        console.log('[ADS-B] No API key configured, skipping');
-        return;
-    }
-
     const allMilitary: MilitaryFlight[] = [];
 
-    for (const coord of MONITORING_COORDS) {
-        try {
-            const response = await client.get(
-                `https://adsbexchange.com/api/aircraft/json/lat/${coord.lat}/lon/${coord.lon}/dist/250/`,
-                {
-                    headers: {
-                        'api-auth': env.ADSBX_API_KEY,
-                        Accept: 'application/json',
-                    },
-                    timeout: 10000,
-                }
-            );
+    try {
+        const response = await client.get(
+            `https://api.adsb.lol/v2/mil`,
+            {
+                headers: {
+                    Accept: 'application/json',
+                },
+                timeout: 10000,
+            }
+        );
 
-            const aircraft = response.data?.ac || response.data?.aircraft || [];
-            const military = aircraft
-                .filter((a: any) => a.mil === true || a.military === true || a.dbFlags === 1)
-                .map(normalizeADSBFlight)
-                .filter((f: MilitaryFlight) => f.lat !== 0 && f.lon !== 0);
+        const aircraft = response.data?.ac || response.data?.aircraft || [];
+        const military = aircraft
+            .map(normalizeADSBFlight)
+            .filter((f: MilitaryFlight) => f.lat !== 0 && f.lon !== 0);
 
-            allMilitary.push(...military);
-        } catch (error: any) {
-            console.error(`[ADS-B] Poll failed for ${coord.label}:`, error.message);
-        }
+        allMilitary.push(...military);
+    } catch (error: any) {
+        console.error(`[ADS-B] Poll failed:`, error.message);
     }
 
     if (allMilitary.length > 0) {

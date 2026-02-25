@@ -18,3 +18,7 @@ services:
         value: https://celestrak.com/NORAD/elements/gp.php?GROUP=active&FORMAT=tle
       - key: FRONTEND_URL
         value: https://heimdallrproject.vercel.app
+      - key: OPENSKY_USERNAME
+        value: n3on250-api-client
+      - key: OPENSKY_PASSWORD
+        value: VJoEq5HThldIpB1IP2Yy6zLQzJL0jCEN
