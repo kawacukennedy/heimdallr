@@ -1,8 +1,13 @@
 {
     "name": "heimdallr-frontend",
     "version": "1.0.0",
-    "private": true,
     "description": "Heimdallr – Real-time Geospatial Intelligence Dashboard",
+    "author": "KAWACU RUGIRANEZA Arnaud Kennedy",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/kawacukennedy/heimdallr.git"
+    },
     "scripts": {
         "dev": "next dev",
         "copy-cesium": "rm -rf public/assets/cesium && mkdir -p public/assets/cesium && cp -r node_modules/cesium/Build/Cesium/Workers public/assets/cesium/ && cp -r node_modules/cesium/Build/Cesium/ThirdParty public/assets/cesium/ && cp -r node_modules/cesium/Build/Cesium/Assets public/assets/cesium/ && cp -r node_modules/cesium/Build/Cesium/Widgets public/assets/cesium/",

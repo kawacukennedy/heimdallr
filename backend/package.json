@@ -2,6 +2,12 @@
   "name": "heimdallr-backend",
   "version": "1.0.0",
   "description": "Heimdallr Backend – API aggregation, CORS proxying, real-time broadcasting",
+  "author": "KAWACU RUGIRANEZA Arnaud Kennedy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kawacukennedy/heimdallr.git"
+  },
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
