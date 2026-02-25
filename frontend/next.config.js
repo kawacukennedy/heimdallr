@@ -18,52 +18,15 @@ const nextConfig = {
     },
 
     webpack: (config, { isServer, webpack }) => {
-        // ---- CesiumJS Configuration ----
-        // Force Webpack to load the built CommonJS version of Cesium, completely bypassing 
-        // the Next.js 14 SWC minifier bug with Cesium's ESM exports.
-        config.plugins.push(
-            new webpack.NormalModuleReplacementPlugin(
-                /^cesium$/,
-                path.resolve(__dirname, 'node_modules/cesium/Build/Cesium/index.cjs')
-            )
-        );
+        // Disable AMD for Cesium to prevent "Can't resolve './IPv6'" and similar errors
+        config.module.unknownContextCritical = false;
+        config.module.rules.push({
+            test: /\.js$/,
+            include: /node_modules[\\/]cesium/,
+            parser: { amd: false },
+        });
 
         if (!isServer) {
-            config.plugins.push(
-                new CopyPlugin({
-                    patterns: [
-                        {
-                            from: path.join(
-                                __dirname,
-                                'node_modules/cesium/Build/Cesium/Workers'
-                            ),
-                            to: path.join(__dirname, 'public/assets/cesium/Workers'),
-                        },
-                        {
-                            from: path.join(
-                                __dirname,
-                                'node_modules/cesium/Build/Cesium/ThirdParty'
-                            ),
-                            to: path.join(__dirname, 'public/assets/cesium/ThirdParty'),
-                        },
-                        {
-                            from: path.join(
-                                __dirname,
-                                'node_modules/cesium/Build/Cesium/Assets'
-                            ),
-                            to: path.join(__dirname, 'public/assets/cesium/Assets'),
-                        },
-                        {
-                            from: path.join(
-                                __dirname,
-                                'node_modules/cesium/Build/Cesium/Widgets'
-                            ),
-                            to: path.join(__dirname, 'public/assets/cesium/Widgets'),
-                        },
-                    ],
-                })
-            );
-
             config.plugins.push(
                 new webpack.DefinePlugin({
                     CESIUM_BASE_URL: JSON.stringify('/assets/cesium'),

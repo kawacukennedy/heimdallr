@@ -5,7 +5,8 @@
     "description": "Heimdallr – Real-time Geospatial Intelligence Dashboard",
     "scripts": {
         "dev": "next dev",
-        "build": "next build",
+        "copy-cesium": "rm -rf public/assets/cesium && mkdir -p public/assets/cesium && cp -r node_modules/cesium/Build/Cesium/Workers public/assets/cesium/ && cp -r node_modules/cesium/Build/Cesium/ThirdParty public/assets/cesium/ && cp -r node_modules/cesium/Build/Cesium/Assets public/assets/cesium/ && cp -r node_modules/cesium/Build/Cesium/Widgets public/assets/cesium/",
+        "build": "npm run copy-cesium && next build",
         "start": "next start",
         "lint": "next lint",
         "test": "jest",
