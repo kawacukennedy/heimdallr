@@ -1,5 +1,6 @@
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
+import { useEffect, useState } from 'react';
 import TopBar from '@/components/ui/TopBar';
 import LeftSidebar from '@/components/ui/LeftSidebar';
 import BottomPanel from '@/components/ui/BottomPanel';
@@ -34,8 +35,18 @@ const SHADER_THEME_CLASS: Record<string, string> = {
 };
 
 export default function Home() {
+    const [mounted, setMounted] = useState(false);
     const activeShader = useUIStore((s) => s.activeShader);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     useKeyboardShortcuts();
+
+    if (!mounted) {
+        return <div className="w-screen h-screen bg-black" />; // SSR placeholder
+    }
 
     const themeClass = SHADER_THEME_CLASS[activeShader] || '';
 
