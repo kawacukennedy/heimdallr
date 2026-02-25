@@ -38,13 +38,6 @@ function getCivilianChannel() {
     return civilianChannel;
 }
 
-const GLOBAL_HUBS = [
-    { lat: 40.71, lon: -74.00, label: 'New York' },
-    { lat: 51.50, lon: -0.12, label: 'London' },
-    { lat: 35.67, lon: 139.65, label: 'Tokyo' },
-    { lat: 48.85, lon: 2.35, label: 'Paris' },
-    { lat: 38.90, lon: -77.03, label: 'Washington DC' }
-];
 
 function normalizeAdsbLol(ac: any): FlightState {
     return {
@@ -65,23 +58,22 @@ function normalizeAdsbLol(ac: any): FlightState {
 export async function pollOpenSky(): Promise<void> {
     const allFlights: FlightState[] = [];
 
-    // Fetch from ADSB.lol for real civilian flights since OpenSky IP bans data centers
-    for (const hub of GLOBAL_HUBS) {
-        try {
-            const response = await client.get(`https://api.adsb.lol/v2/point/${hub.lat}/${hub.lon}/250`, {
-                headers: { Accept: 'application/json' },
-            });
+    // Fetch from ADSB.lol globally (0,0 with 25000 nautical mile radius covers the earth)
+    try {
+        const response = await client.get(`https://api.adsb.lol/v2/point/0/0/25000`, {
+            headers: { Accept: 'application/json' },
+            timeout: 15000,
+        });
 
-            const aircraft = response.data?.ac || response.data?.aircraft || [];
-            const civilian = aircraft
-                .filter((a: any) => !(a.mil === true || a.military === true || a.dbFlags === 1))
-                .map(normalizeAdsbLol)
-                .filter((f: FlightState) => f.lat !== 0 && f.lon !== 0);
+        const aircraft = response.data?.ac || response.data?.aircraft || [];
+        const civilian = aircraft
+            .filter((a: any) => !(a.mil === true || a.military === true || a.dbFlags === 1))
+            .map(normalizeAdsbLol)
+            .filter((f: FlightState) => f.lat !== 0 && f.lon !== 0);
 
-            allFlights.push(...civilian);
-        } catch (error: any) {
-            console.error(`[Civilian] Poll failed for ${hub.label}:`, error.message);
-        }
+        allFlights.push(...civilian);
+    } catch (error: any) {
+        console.error(`[Civilian] Global poll failed:`, error.message);
     }
 
     if (allFlights.length > 0) {
