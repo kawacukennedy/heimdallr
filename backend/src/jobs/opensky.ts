@@ -83,6 +83,14 @@ export async function pollOpenSky(): Promise<void> {
 
             const channel = getCivilianChannel();
             if (channel) {
+                if (channel.state !== 'joined') {
+                    await new Promise((resolve) => {
+                        channel.subscribe((status) => {
+                            if (status === 'SUBSCRIBED') resolve(true);
+                        });
+                    });
+                }
+
                 await channel.send({
                     type: 'broadcast',
                     event: 'update',

@@ -90,6 +90,15 @@ export async function pollADSBExchange(): Promise<void> {
 
             const channel = getMilitaryChannel();
             if (channel) {
+                // Wait for subscribe to finish before sending to avoid REST fallback warning
+                if (channel.state !== 'joined') {
+                    await new Promise((resolve) => {
+                        channel.subscribe((status) => {
+                            if (status === 'SUBSCRIBED') resolve(true);
+                        });
+                    });
+                }
+
                 await channel.send({
                     type: 'broadcast',
                     event: 'update',
