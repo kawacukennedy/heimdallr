@@ -41,6 +41,7 @@ heimdallr/
 cd database/
 # Execute migrations/001_initial.sql through 007_seed.sql
 ```
+> **Note on Production Deployment:** When deploying the backend to Render, ensure your `DATABASE_URL` points to the Supabase IPv4 Transaction Pooler (port `6543`). The backend migrator will automatically append the `?pgbouncer=true` flag.
 
 ### 2. Backend
 ```bash
