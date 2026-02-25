@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plane, Sword, Satellite, Camera, Car,
     Sun, Moon, Flame, Monitor,
-    MapPin, Plus, ChevronLeft, Trash2,
+    MapPin, Plus, ChevronLeft, ChevronRight, Trash2,
 } from 'lucide-react';
 import GlassPanel from './GlassPanel';
 import IconButton from './IconButton';
@@ -177,6 +177,22 @@ export default function LeftSidebar() {
                             </div>
                         </GlassPanel>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Collapsed toggle button */}
+            <AnimatePresence>
+                {!sidebarOpen && (
+                    <motion.button
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        onClick={toggleSidebar}
+                        className="fixed top-[76px] left-0 z-40 bg-black/40 backdrop-blur-md border border-white/10 border-l-0 rounded-r-lg p-2 hover:bg-white/10 transition-colors shadow-lg"
+                        aria-label="Expand Sidebar"
+                    >
+                        <ChevronRight size={20} className="text-white/70" />
+                    </motion.button>
                 )}
             </AnimatePresence>
 
