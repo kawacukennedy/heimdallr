@@ -12,10 +12,13 @@ export async function runMigrationsAndSeed() {
     try {
         const isLocalHost = env.DATABASE_URL.includes('localhost') || env.DATABASE_URL.includes('127.0.0.1');
 
-        // Force pgbouncer flag for Supabase pooler to prevent IPv4 timeouts in Render
+        // Force direct database connection for migrations because the Supabase 6543 Pooler times out 
+        // with prepared statements on IPv4 Render environments.
         let dbUrl = env.DATABASE_URL;
-        if (dbUrl.includes('.supabase.co') && dbUrl.includes('6543') && !dbUrl.includes('pgbouncer=true')) {
-            dbUrl = dbUrl.includes('?') ? `${dbUrl}&pgbouncer=true&connection_limit=1` : `${dbUrl}?pgbouncer=true&connection_limit=1`;
+        if (dbUrl.includes('.supabase.co') && dbUrl.includes('6543')) {
+            dbUrl = dbUrl.replace(':6543', ':5432');
+            dbUrl = dbUrl.replace('?pgbouncer=true', '');
+            dbUrl = dbUrl.replace('&pgbouncer=true', '');
         }
 
         const sql = postgres(dbUrl, { ssl: isLocalHost ? false : 'require', idle_timeout: 20, max: 1 });

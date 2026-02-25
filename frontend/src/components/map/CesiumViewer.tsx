@@ -44,7 +44,10 @@ export default function CesiumViewer({ onReady, children }: CesiumViewerProps) {
                     powerPreference: 'high-performance' as WebGLPowerPreference,
                 },
             },
-            terrainProvider: await Cesium.createWorldTerrainAsync(),
+            terrainProvider: await Cesium.createWorldTerrainAsync({
+                requestWaterMask: true,
+                requestVertexNormals: true
+            }),
         });
 
         // Scene configuration
