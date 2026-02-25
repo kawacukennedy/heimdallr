@@ -1,0 +1,18 @@
+export const KEYBOARD_SHORTCUTS = [
+    { key: '1', action: 'Toggle civilian flights', category: 'Layers' },
+    { key: '2', action: 'Toggle military flights', category: 'Layers' },
+    { key: '3', action: 'Toggle satellites', category: 'Layers' },
+    { key: '4', action: 'Toggle CCTV', category: 'Layers' },
+    { key: '5', action: 'Toggle road traffic', category: 'Layers' },
+    { key: 'n', action: 'Night vision shader', category: 'Shaders' },
+    { key: 't', action: 'Thermal shader', category: 'Shaders' },
+    { key: 'c', action: 'CRT shader', category: 'Shaders' },
+    { key: 's', action: 'Standard shader', category: 'Shaders' },
+    { key: 'b', action: 'Toggle left sidebar', category: 'Panels' },
+    { key: 'p', action: 'Toggle bottom panel', category: 'Panels' },
+    { key: 'r', action: 'Toggle right panel', category: 'Panels' },
+    { key: 'f', action: 'Fly to selected entity', category: 'Navigation' },
+    { key: '/', action: 'Focus search', category: 'Navigation' },
+    { key: '?', action: 'Show help', category: 'Help' },
+    { key: 'Esc', action: 'Close modal or clear selection', category: 'General' },
+] as const;

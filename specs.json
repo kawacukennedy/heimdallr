@@ -1,0 +1,2068 @@
+{
+  "project": {
+    "name": "Heimdallr",
+    "version": "1.0.0",
+    "description": "A real‑time, cinematic geospatial intelligence dashboard that fuses 3D photorealistic tiles, live aviation and satellite telemetry, municipal CCTV feeds, and simulated urban traffic into a single high‑performance web application. The name 'Heimdallr' references the all‑seeing Norse god, reflecting the system's ability to provide a global operational picture.",
+    "license": "Proprietary",
+    "author": "KAWACU RUGIRANEZA Arnaud Kennedy",
+    "repository": "https://github.com/kawacukennedy/heimdallr.git",
+    "team": {
+      "product_manager": "KAWACU RUGIRANEZA Arnaud Kennedy",
+      "tech_lead": "KAWACU RUGIRANEZA Arnaud Kennedy",
+      "frontend_engineers": 1,
+      "backend_engineers": 1,
+      "devops_engineer": 1,
+      "qa_engineer": 1,
+      "ui_ux_designer": 1,
+      "security_engineer": 1,
+      "data_scientist": 1
+    },
+    "milestones": {
+      "alpha": "2025-04-01",
+      "beta": "2025-05-15",
+      "release": "2025-06-30",
+      "post_release_1": "2025-07-15"
+    },
+    "budget": {
+      "estimated_monthly_cost_usd": 1200,
+      "breakdown": {
+        "vercel": 200,
+        "render": 400,
+        "supabase": 300,
+        "google_maps_api": 200,
+        "misc": 100
+      }
+    },
+    "compliance": {
+      "gdpr": true,
+      "ccpa": true,
+      "data_retention_days": 30,
+      "user_consent_required": true
+    }
+  },
+  "overall_architecture": {
+    "summary": "Heimdallr follows a strict separation of concerns across three cloud platforms: Vercel for frontend edge delivery, Render for backend microservices, and Supabase for persistent spatial data and ultra‑low‑latency real‑time broadcasting. The frontend is a React/Next.js SPA with CesiumJS for 3D rendering, custom WebGL shaders, and Web Workers for heavy computations. The backend consists of Node.js microservices that poll external APIs, normalize data, and push it to Supabase Realtime channels. Supabase provides PostgreSQL with PostGIS for spatial storage and Elixir‑based WebSocket channels for ephemeral telemetry.",
+    "components": [
+      {
+        "name": "Frontend",
+        "platform": "Vercel",
+        "primaryFunction": "WebGL rendering, user interaction, real‑time data subscription, custom shader execution.",
+        "scaling": "Vercel Edge Network automatically scales to serve static assets and API routes globally.",
+        "redundancy": "Multiple edge locations, automatic failover."
+      },
+      {
+        "name": "Backend",
+        "platform": "Render",
+        "primaryFunction": "API aggregation, CORS proxying, data normalization, scheduling.",
+        "scaling": "Horizontal auto‑scaling based on CPU/memory usage; multiple instances behind a load balancer.",
+        "redundancy": "Multi‑AZ deployment on Render, automatic restarts."
+      },
+      {
+        "name": "Database & Realtime",
+        "platform": "Supabase",
+        "primaryFunction": "Spatial data storage, persistent configuration, real‑time message broadcasting.",
+        "scaling": "Managed PostgreSQL with connection pooling; Realtime handles thousands of concurrent WebSocket connections.",
+        "redundancy": "Automated backups, point‑in‑time recovery, read replicas (optional)."
+      }
+    ],
+    "communication_protocols": {
+      "frontend_backend": "HTTPS (REST) for static data and proxy requests; WebSocket (via Supabase Realtime) for live telemetry.",
+      "backend_database": "PostgreSQL wire protocol (SSL) with connection pooling via Supabase's built‑in pooler.",
+      "frontend_database": "Supabase Realtime WebSocket subscriptions (broadcast and postgres changes)."
+    },
+    "network_diagram": {
+      "description": "User's browser connects to Vercel edge (frontend). Frontend establishes WebSocket to Supabase Realtime. Backend services on Render poll external APIs, write to Supabase (if needed), and broadcast via Realtime. Render also serves proxy endpoints for CCTV images.",
+      "mermaid": "graph TD; User[Browser] --> Vercel[Vercel Edge]; Vercel --> SupabaseWS[Supabase Realtime WS]; Render[Render Backend] --> ExtAPI[External APIs]; Render --> SupabaseDB[Supabase Postgres]; Render --> SupabaseBroadcast[Supabase Realtime Broadcast]; SupabaseBroadcast --> SupabaseWS; User --> RenderProxy[Render Proxy Endpoints];"
+    },
+    "data_flow_diagram": {
+      "mermaid": "sequenceDiagram; participant User; participant Frontend; participant Supabase; participant Backend; participant OpenSky; User->>Frontend: Open app; Frontend->>Supabase: Subscribe to channels; Backend->>OpenSky: Poll every 5s; OpenSky-->>Backend: Flight data; Backend->>Supabase: Broadcast on flights:civilian; Supabase-->>Frontend: WebSocket push; Frontend->>Frontend: Update Cesium entities;"
+    }
+  },
+  "technology_stack": {
+    "frontend": {
+      "framework": "Next.js 14 (React 18) with TypeScript",
+      "3d_engine": "CesiumJS (custom build with WebWorker support)",
+      "state_management": "Zustand for UI state; React useRef for Cesium entity references; React Query for server state",
+      "styling": "TailwindCSS + custom CSS modules for iOS 26 glassmorphic design",
+      "icons": "lucide-react for all icons (explicitly used throughout components)",
+      "shaders": "GLSL (custom post‑processing via Cesium.PostProcessStage; custom material shaders via Cesium.CustomShader)",
+      "real_time_client": "@supabase/supabase-js (including Realtime client)",
+      "web_workers": "Dedicated workers for SGP4 orbit propagation and dead‑reckoning interpolation",
+      "build_tool": "Webpack (customized via Next.js to serve Cesium workers and static assets)",
+      "ui_component_library": "Custom built, following iOS 26 design language",
+      "animation": "Framer Motion for spring animations on UI panels",
+      "mapping": "CesiumJS with Google Photorealistic 3D Tiles",
+      "http_client": "Axios for REST calls",
+      "testing": "Jest + React Testing Library, Cypress for E2E",
+      "code_quality": "ESLint, Prettier, Husky pre‑commit hooks, lint-staged",
+      "error_boundary": "React Error Boundaries with Sentry integration",
+      "accessibility": "ARIA labels, keyboard navigation, focus trapping in modals, WCAG 2.1 AA compliance",
+      "pwa": "Next.js PWA plugin with service worker for offline support (caching map tiles)",
+      "bundle_analysis": "@next/bundle-analyzer",
+      "performance_monitoring": "Vercel Analytics, Sentry Performance"
+    },
+    "backend": {
+      "runtime": "Node.js 20 (Fastify) – chosen for high performance and low overhead",
+      "language": "TypeScript for type safety across the stack",
+      "api_integration": "Axios with rate‑limiting and retry logic (axios-retry)",
+      "scheduling": "node-cron for periodic jobs",
+      "proxying": "Fastify reverse proxy middleware (@fastify/http-proxy)",
+      "real_time_publishing": "Supabase Realtime Broadcast via @supabase/supabase-js (service role)",
+      "environment": "Render (Docker containers, auto‑scaling)",
+      "logging": "Pino (Fastify's default) with structured logging",
+      "error_tracking": "Sentry",
+      "testing": "Jest, Supertest for API tests",
+      "rate_limiting": "@fastify/rate-limit",
+      "caching": "node-cache for in‑memory caching of CCTV images; Redis for distributed caching (optional)",
+      "validation": "Zod for request/response validation",
+      "database_orm": "Prisma or Knex (but Supabase client used directly)",
+      "health_check": "/health endpoint with system status",
+      "metrics": "Prometheus client for metrics endpoint",
+      "authentication": "JWT validation via Supabase Auth",
+      "security": "Helmet for security headers, CORS configuration, input sanitization"
+    },
+    "database": {
+      "system": "Supabase (PostgreSQL 15 with PostGIS 3.4)",
+      "extensions": [
+        "postgis",
+        "uuid-ossp",
+        "pgcrypto",
+        "btree_gin"
+      ],
+      "realtime": "Supabase Realtime (Elixir channels) enabled for broadcast and selected tables",
+      "connection_pooling": "Supabase's built‑in pgBouncer",
+      "backup": "Daily automated backups with point‑in‑time recovery",
+      "monitoring": "Supabase dashboard, custom SQL monitoring",
+      "indexing": "Spatial indexes on geometry columns, B-tree on frequently queried fields",
+      "partitioning": "For large tables (e.g., tle_snapshots) by date"
+    }
+  },
+  "frontend_architecture": {
+    "directory_structure": {
+      "src": {
+        "components": {
+          "map": [
+            "CesiumViewer.tsx",
+            "CameraControls.tsx",
+            "EntityLayers.tsx",
+            "CustomShaderManager.tsx",
+            "ParticleSystems.tsx",
+            "CctvProjectiveTexture.tsx",
+            "EntityLabelRenderer.tsx",
+            "MapErrorBoundary.tsx",
+            "LayerManager.tsx",
+            "EntityHighlight.tsx",
+            "MapControls.tsx",
+            "Compass.tsx",
+            "ZoomControls.tsx"
+          ],
+          "ui": [
+            "GlassPanel.tsx",
+            "TopBar.tsx",
+            "LeftSidebar.tsx",
+            "BottomPanel.tsx",
+            "RightPanel.tsx",
+            "SearchOverlay.tsx",
+            "SettingsModal.tsx",
+            "EntityDetailCard.tsx",
+            "KeyboardShortcutsHelp.tsx",
+            "AddBookmarkModal.tsx",
+            "ConnectionStatus.tsx",
+            "FpsCounter.tsx",
+            "LayerToggle.tsx",
+            "ShaderSelector.tsx",
+            "BookmarkList.tsx",
+            "CctvThumbnailGrid.tsx",
+            "TimelineSlider.tsx",
+            "ErrorFallback.tsx",
+            "LoadingSpinner.tsx",
+            "IconButton.tsx",
+            "Tooltip.tsx",
+            "Slider.tsx",
+            "Select.tsx",
+            "Checkbox.tsx",
+            "RadioGroup.tsx",
+            "Tabs.tsx",
+            "Modal.tsx",
+            "Toast.tsx",
+            "ToastProvider.tsx"
+          ],
+          "shaders": {
+            "postProcess": [
+              "nightVision.glsl",
+              "crt.glsl",
+              "thermal.glsl",
+              "bloom.glsl",
+              "edgeDetection.glsl"
+            ],
+            "material": [
+              "projectiveTexture.vert",
+              "projectiveTexture.frag",
+              "thermalMaterial.glsl",
+              "nightVisionMaterial.glsl",
+              "waterEffect.glsl"
+            ]
+          },
+          "workers": [
+            "sgp4.worker.ts",
+            "deadReckoning.worker.ts",
+            "tleParser.worker.ts"
+          ]
+        },
+        "hooks": [
+          "useCesium.ts",
+          "useRealtimeSubscription.ts",
+          "useCamera.ts",
+          "useEntitySelection.ts",
+          "useKeyboardShortcuts.ts",
+          "useLayerVisibility.ts",
+          "useShader.ts",
+          "useCctvProjection.ts",
+          "useParticleSystem.ts",
+          "useBookmarks.ts",
+          "useSettings.ts",
+          "useSearch.ts",
+          "useLocalStorage.ts",
+          "useDebounce.ts",
+          "useInterval.ts",
+          "usePrevious.ts",
+          "useOnScreen.ts",
+          "useWindowSize.ts",
+          "useToast.ts",
+          "useAnalytics.ts"
+        ],
+        "lib": {
+          "cesium": [
+            "cesiumConfig.ts",
+            "tilesetManager.ts",
+            "entityManager.ts",
+            "shaderManager.ts",
+            "cameraUtils.ts",
+            "cesiumTypes.ts",
+            "coordinateUtils.ts",
+            "boundingSphereUtils.ts"
+          ],
+          "realtime": [
+            "supabaseClient.ts",
+            "channels.ts",
+            "payloadTypes.ts",
+            "subscriptionManager.ts",
+            "realtimeConfig.ts"
+          ],
+          "utils": [
+            "geo.ts",
+            "math.ts",
+            "formatting.ts",
+            "workerPool.ts",
+            "logger.ts",
+            "performance.ts",
+            "debounce.ts",
+            "errors.ts",
+            "analytics.ts",
+            "date.ts",
+            "number.ts",
+            "string.ts",
+            "array.ts",
+            "object.ts",
+            "promise.ts",
+            "retry.ts",
+            "cache.ts"
+          ],
+          "constants": [
+            "colors.ts",
+            "keyboardShortcuts.ts",
+            "apiEndpoints.ts",
+            "defaultSettings.ts",
+            "shaderPresets.ts"
+          ],
+          "services": [
+            "api.ts",
+            "geocoding.ts",
+            "cctvProxy.ts",
+            "analytics.ts"
+          ],
+          "types": [
+            "index.ts",
+            "cesium.d.ts",
+            "shader.d.ts",
+            "api.ts",
+            "realtime.ts"
+          ]
+        },
+        "pages": {
+          "index.tsx": "Main dashboard page (full‑screen map)",
+          "_app.tsx": "Custom App with global providers (ErrorBoundary, Sentry, Toast, etc.)",
+          "_document.tsx": "Custom Document for Cesium static assets",
+          "404.tsx": "Custom 404 page",
+          "500.tsx": "Custom 500 page",
+          "api": {
+            "health.ts": "API route for health check"
+          }
+        },
+        "public": {
+          "assets": {
+            "cesium": [
+              "Cesium.js",
+              "Cesium.css",
+              "Widgets/",
+              "Workers/"
+            ],
+            "icons": [
+              "logo.svg",
+              "favicon.ico",
+              "apple-touch-icon.png"
+            ],
+            "models": [
+              "f16.glb",
+              "su57.glb",
+              "satellite.glb",
+              "cctv_camera.glb",
+              "commercial_aircraft.glb",
+              "drone.glb"
+            ],
+            "fonts": [
+              "Inter.woff2"
+            ],
+            "images": [
+              "placeholder-cctv.jpg"
+            ]
+          }
+        },
+        "styles": {
+          "globals.css": "Tailwind imports and base styles",
+          "ios26.css": "iOS 26 design tokens and glassmorphic effects"
+        },
+        "types": {
+          "index.ts": "Global TypeScript interfaces",
+          "cesium.d.ts": "Cesium type augmentations",
+          "shader.d.ts": "Shader module declarations",
+          "api.ts": "API response types"
+        },
+        "store": {
+          "uiStore.ts": "Zustand store for UI state",
+          "entityStore.ts": "Mutable ref store for Cesium entities",
+          "settingsStore.ts": "Persisted settings using zustand/middleware"
+        },
+        "providers": {
+          "CesiumProvider.tsx": "Provides Cesium viewer context",
+          "RealtimeProvider.tsx": "Provides Supabase Realtime context",
+          "ToastProvider.tsx": "Toast notification context"
+        }
+      }
+    },
+    "core_modules": {
+      "CesiumViewer": {
+        "description": "Initializes the Cesium viewer with custom configuration. Disables default UI (timeline, animation, base layer picker). Sets up WebGL context with antialiasing and high performance settings. Attaches event listeners for camera movement and entity selection.",
+        "codeSnippet": "import * as Cesium from 'cesium';\nimport { useRef, useEffect } from 'react';\n\nexport const CesiumViewer = ({ onReady, children }) => {\n  const containerRef = useRef<HTMLDivElement>(null);\n  const viewerRef = useRef<Cesium.Viewer | null>(null);\n\n  useEffect(() => {\n    if (!containerRef.current) return;\n\n    const viewer = new Cesium.Viewer(containerRef.current, {\n      terrainProvider: Cesium.createWorldTerrain(),\n      baseLayer: Cesium.ImageryLayer.fromProviderAsync(Cesium.IonImageryProvider.fromAssetId(2)),\n      timeline: false,\n      animation: false,\n      geocoder: false,\n      homeButton: false,\n      sceneModePicker: false,\n      baseLayerPicker: false,\n      navigationHelpButton: false,\n      fullscreenButton: false,\n      infoBox: false,\n      selectionIndicator: false,\n      contextOptions: {\n        webgl: {\n          alpha: true,\n          depth: true,\n          stencil: true,\n          antialias: true,\n          powerPreference: \"high-performance\"\n        }\n      }\n    });\n\n    viewer.scene.backgroundColor = Cesium.Color.BLACK;\n    viewer.scene.globe.enableLighting = true;\n    viewer.scene.globe.depthTestAgainstTerrain = true;\n    viewer.scene.highDynamicRange = true;\n    viewer.scene.postProcessStages.fxaa.enabled = true;\n\n    // Load Google Photorealistic 3D Tiles\n    const tileset = viewer.scene.primitives.add(new Cesium.Cesium3DTileset({\n      url: `https://tile.googleapis.com/v1/3dtiles/root.json?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,\n      showCreditsOnScreen: true,\n      maximumScreenSpaceError: 16,\n      maximumMemoryUsage: 512\n    }));\n\n    viewerRef.current = viewer;\n    onReady?.(viewer);\n\n    return () => {\n      viewer.destroy();\n    };\n  }, [onReady]);\n\n  return (\n    <div ref={containerRef} className=\"w-full h-full\">\n      {children}\n    </div>\n  );\n};",
+        "tilesetLoading": {
+          "googlePhotorealistic": {
+            "url": "https://tile.googleapis.com/v1/3dtiles/root.json",
+            "apiKey": "process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY",
+            "options": {
+              "showCreditsOnScreen": true,
+              "maximumScreenSpaceError": 16,
+              "maximumMemoryUsage": 512,
+              "cullWithChildrenBounds": true,
+              "skipLevelOfDetail": true,
+              "baseScreenSpaceError": 1024,
+              "skipScreenSpaceErrorFactor": 16,
+              "skipLevels": 1
+            }
+          }
+        },
+        "performance_tweaks": {
+          "targetFrameRate": 60,
+          "suspendUpdate": false,
+          "requestRenderMode": true,
+          "maximumRenderTimeChange": 0.5
+        }
+      },
+      "EntityLayers": {
+        "description": "Manages creation, update, and removal of dynamic entities: aircraft, satellites, CCTV markers, road particles. Each layer is a separate module that subscribes to real‑time data and updates the Cesium entity collection stored in a ref.",
+        "layers": [
+          {
+            "name": "CivilianFlights",
+            "dataSource": "Supabase Realtime broadcast channel 'flights:civilian'",
+            "updateFrequency": "Every 5 seconds (with dead‑reckoning between updates)",
+            "visualization": "White point primitives with altitude scaling; on selection, show glTF model.",
+            "implementation": {
+              "subscription": "supabase.channel('flights:civilian').on('broadcast', { event: 'update' }, (payload) => updateFlights(payload)).subscribe()",
+              "entityCreation": "entity = new Cesium.Entity({\n  id: payload.icao24,\n  position: new Cesium.SampledPositionProperty(),\n  point: { pixelSize: 8, color: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 1 },\n  label: { text: payload.callsign, show: false, font: '12px Inter', fillColor: Cesium.Color.WHITE, style: Cesium.LabelStyle.FILL_AND_OUTLINE, outlineWidth: 2, verticalOrigin: Cesium.VerticalOrigin.BOTTOM },\n  model: { uri: '/assets/models/commercial_aircraft.glb', show: false, minimumPixelSize: 64 },\n  properties: new Cesium.PropertyBag(payload)\n});",
+              "interpolation": "entity.position.addSample(Cesium.JulianDate.now(), Cesium.Cartesian3.fromDegrees(payload.lon, payload.lat, payload.alt));",
+              "updateLogic": "const updateFlights = (payload) => {\n  const store = entityStoreRef.current.civilianFlights;\n  payload.forEach(flight => {\n    let entity = store.get(flight.icao24);\n    if (!entity) {\n      entity = createFlightEntity(flight);\n      store.set(flight.icao24, entity);\n      viewer.entities.add(entity);\n    }\n    entity.position.addSample(Cesium.JulianDate.now(), Cesium.Cartesian3.fromDegrees(flight.lon, flight.lat, flight.alt));\n    entity.properties = new Cesium.PropertyBag(flight);\n  });\n};"
+            }
+          },
+          {
+            "name": "MilitaryFlights",
+            "dataSource": "Supabase Realtime broadcast channel 'flights:military'",
+            "visualization": "Orange point primitives or detailed glTF models (F‑16, Su‑57) based on type.",
+            "implementation": "Similar to civilian but with orange color and model selection based on type: if (flight.type === 'F16') modelUri = '/assets/models/f16.glb' else if (flight.type === 'Su57') modelUri = '/assets/models/su57.glb'."
+          },
+          {
+            "name": "Satellites",
+            "dataSource": "Web Worker SGP4 propagation (TLEs fetched from backend)",
+            "visualization": "Small point primitives with color based on orbit type (LEO, GEO); polylines for orbital trails (90‑minute projection).",
+            "implementation": {
+              "worker": "const worker = new Worker(new URL('./workers/sgp4.worker.ts', import.meta.url));\nworker.postMessage({ type: 'init', tles });\n\nconst animate = () => {\n  worker.postMessage({ type: 'tick', time: Cesium.JulianDate.now().toString() });\n  requestAnimationFrame(animate);\n};\nanimate();\n\nworker.onmessage = (e) => {\n  const { positions } = e.data;\n  positions.forEach(pos => {\n    const entity = satelliteStore.get(pos.id);\n    if (entity) {\n      entity.position.setValue(Cesium.Cartesian3.fromDegrees(pos.lon, pos.lat, pos.height * 1000));\n    }\n  });\n};",
+              "entityCreation": "entity = new Cesium.Entity({\n  id: sat.id,\n  position: new Cesium.ConstantPositionProperty(Cesium.Cartesian3.fromDegrees(0, 0, 0)),\n  point: { pixelSize: 4, color: sat.orbitType === 'LEO' ? Cesium.Color.LIME : Cesium.Color.YELLOW },\n  path: { leadTime: 90, trailTime: 90, resolution: 120, material: new Cesium.PolylineGlowMaterialProperty({ glowPower: 0.2, color: Cesium.Color.WHITE }) }\n});"
+            }
+          },
+          {
+            "name": "CCTVMarkers",
+            "dataSource": "Supabase Postgres Changes on 'cctv_cameras' table",
+            "visualization": "3D icon with camera model; when zoomed in, activate projective texture shader.",
+            "implementation": {
+              "subscription": "supabase.channel('cctv').on('postgres_changes', { event: '*', schema: 'public', table: 'cctv_cameras' }, (payload) => updateCCTV(payload)).subscribe()",
+              "entityCreation": "entity = new Cesium.Entity({\n  id: cam.id,\n  position: Cesium.Cartesian3.fromDegrees(cam.lon, cam.lat, 10),\n  model: { uri: '/assets/models/cctv_camera.glb', scale: 10, minimumPixelSize: 32 },\n  properties: { heading: cam.heading, pitch: cam.pitch, url: cam.source_url }\n});"
+            }
+          },
+          {
+            "name": "RoadParticles",
+            "dataSource": "Pre‑computed road networks from OpenStreetMap (stored in Supabase table 'road_networks')",
+            "visualization": "Cesium.ParticleSystem emitting glowing particles along road polylines.",
+            "implementation": {
+              "loading": "const roadGeo = await fetch(`/api/roads/${city}`).then(res => res.json());",
+              "particleSystem": "const roadLine = Cesium.Cartesian3.fromDegreesArray(roadGeo.coordinates.flat());\nconst ps = viewer.scene.primitives.add(new Cesium.ParticleSystem({\n  image: '/assets/icons/glow.png',\n  startColor: Cesium.Color.YELLOW.withAlpha(0.8),\n  endColor: Cesium.Color.YELLOW.withAlpha(0.0),\n  startScale: 1.0,\n  endScale: 4.0,\n  minimumParticleLife: 2.0,\n  maximumParticleLife: 4.0,\n  minimumSpeed: 10.0,\n  maximumSpeed: 30.0,\n  emissionRate: 100,\n  emitter: new Cesium.PolylineEmitter({ polyline: roadLine })\n}));"
+            }
+          }
+        ],
+        "layer_management": {
+          "visibility": "Each layer's entities have a 'show' property bound to UI state.",
+          "culling": "Entities outside view frustum are automatically culled by Cesium.",
+          "clustering": "For dense layers (e.g., satellites), use Cesium's clustering features."
+        }
+      },
+      "ShaderManager": {
+        "description": "Dynamically applies post‑process stages and custom material shaders based on user selection. Maintains references to active stages and updates uniforms in real‑time.",
+        "postProcessStages": {
+          "crt": {
+            "type": "Cesium.PostProcessStage",
+            "fragmentShader": "shaders/postProcess/crt.glsl",
+            "uniforms": {
+              "scanlineIntensity": 0.8,
+              "chromaticAberration": 0.002,
+              "pixelSize": 1.0
+            },
+            "codeSnippet": "const crtStage = new Cesium.PostProcessStage({\n  fragmentShader: crtShader,\n  uniforms: { scanlineIntensity: 0.8, chromaticAberration: 0.002, pixelSize: 1.0 }\n});\nviewer.scene.postProcessStages.add(crtStage);"
+          },
+          "nightVision": {
+            "type": "Cesium.PostProcessStage",
+            "fragmentShader": "shaders/postProcess/nightVision.glsl",
+            "uniforms": {
+              "noiseAmount": 0.1,
+              "intensity": 1.2
+            }
+          },
+          "thermal": {
+            "type": "Cesium.PostProcessStageComposite",
+            "stages": [
+              "bloom",
+              "thermalCore"
+            ],
+            "codeSnippet": "const bloom = Cesium.PostProcessStageLibrary.createBloomStage();\nconst thermalCore = new Cesium.PostProcessStage({ fragmentShader: thermalShader });\nconst composite = new Cesium.PostProcessStageComposite([bloom, thermalCore]);\nviewer.scene.postProcessStages.add(composite);"
+          },
+          "edgeDetection": {
+            "type": "Cesium.PostProcessStage",
+            "fragmentShader": "shaders/postProcess/edgeDetection.glsl",
+            "uniforms": {
+              "edgeColor": [
+                1,
+                1,
+                1,
+                1
+              ],
+              "threshold": 0.1
+            }
+          }
+        },
+        "customMaterialShaders": {
+          "projectiveTexture": {
+            "type": "Cesium.CustomShader",
+            "vertexShader": "shaders/material/projectiveTexture.vert",
+            "fragmentShader": "shaders/material/projectiveTexture.frag",
+            "uniforms": {
+              "cctvTexture": "sampler2D",
+              "viewProjectionMatrix": "mat4"
+            },
+            "codeSnippet": "const shader = new Cesium.CustomShader({\n  vertexShaderText: projectiveVert,\n  fragmentShaderText: projectiveFrag,\n  uniforms: {\n    cctvTexture: { value: texture, type: Cesium.UniformType.SAMPLER_2D },\n    viewProjectionMatrix: { value: matrix, type: Cesium.UniformType.MAT4 }\n  }\n});\ntileset.customShader = shader;"
+          },
+          "thermalMaterial": {
+            "type": "Cesium.CustomShader",
+            "fragmentShader": "shaders/material/thermal.glsl",
+            "uniforms": {
+              "palette": "vec3[8]"
+            },
+            "codeSnippet": "const ironbow = [\n  vec3(0.0, 0.0, 0.5), // dark blue\n  vec3(0.0, 0.0, 1.0), // blue\n  vec3(0.0, 1.0, 1.0), // cyan\n  vec3(0.0, 1.0, 0.0), // green\n  vec3(1.0, 1.0, 0.0), // yellow\n  vec3(1.0, 0.5, 0.0), // orange\n  vec3(1.0, 0.0, 0.0), // red\n  vec3(1.0, 1.0, 1.0)  // white\n];"
+          },
+          "waterEffect": {
+            "type": "Cesium.CustomShader",
+            "fragmentShader": "shaders/material/waterEffect.glsl",
+            "uniforms": {
+              "time": "float"
+            }
+          }
+        },
+        "uniform_updates": {
+          "time": "updated every frame via requestAnimationFrame",
+          "cctvTexture": "updated when new CCTV image arrives"
+        }
+      }
+    },
+    "ui_design_ios26": {
+      "design_philosophy": "Heimdallr's UI follows a futuristic iOS 26 aesthetic: glassmorphism, depth, edge‑to‑edge canvas, and dynamic lighting that adapts to the active shader. All panels are semi‑transparent with heavy backdrop blur, thin borders, and subtle shadows. Interactions are smooth and spring‑based.",
+      "design_tokens": {
+        "colors": {
+          "background": "rgba(20, 20, 30, 0.7)",
+          "surface": "rgba(30, 30, 40, 0.8)",
+          "surfaceLight": "rgba(50, 50, 60, 0.9)",
+          "border": "rgba(255, 255, 255, 0.2)",
+          "textPrimary": "#ffffff",
+          "textSecondary": "rgba(255,255,255,0.7)",
+          "accent": "#0a84ff",
+          "accentGlow": "#409cff",
+          "success": "#30d158",
+          "warning": "#ff9f0a",
+          "danger": "#ff453a",
+          "nightVision": "#7cfc00",
+          "thermalHot": "#ff4500"
+        },
+        "typography": {
+          "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          "headline": "600 18px/24px",
+          "body": "400 14px/20px",
+          "caption": "400 12px/16px"
+        },
+        "spacing": {
+          "xs": "4px",
+          "sm": "8px",
+          "md": "16px",
+          "lg": "24px",
+          "xl": "32px",
+          "xxl": "48px"
+        },
+        "borderRadius": {
+          "panel": "12px",
+          "button": "8px",
+          "card": "10px",
+          "circle": "9999px"
+        },
+        "blur": {
+          "panel": "blur(20px)",
+          "modal": "blur(30px)",
+          "heavy": "blur(40px)"
+        },
+        "animation": {
+          "spring": "cubic-bezier(0.2, 0.9, 0.3, 1.2)",
+          "duration": "0.3s",
+          "durationFast": "0.15s",
+          "durationSlow": "0.5s"
+        },
+        "shadows": {
+          "panel": "0 10px 30px -10px rgba(0,0,0,0.5)",
+          "modal": "0 20px 40px -10px rgba(0,0,0,0.7)",
+          "button": "0 2px 8px rgba(0,0,0,0.3)"
+        },
+        "zIndex": {
+          "base": 0,
+          "map": 1,
+          "ui": 10,
+          "panel": 20,
+          "modal": 100,
+          "tooltip": 200
+        }
+      },
+      "components": {
+        "GlassPanel": {
+          "description": "Base component for all floating panels. Uses backdrop‑filter blur, border, and box‑shadow. Supports elevation variants (low, medium, high) and corner rounding.",
+          "props": [
+            "children",
+            "elevation",
+            "rounded",
+            "className",
+            "style"
+          ],
+          "implementation": "const GlassPanel = ({ children, elevation = 'medium', rounded = 'panel', className, style }) => {\n  const blurMap = { low: '10px', medium: '20px', high: '30px' };\n  const shadowMap = { low: 'button', medium: 'panel', high: 'modal' };\n  return (\n    <div className={`bg-white/5 border border-white/10 rounded-${rounded} ${className}`} style={{\n      backdropFilter: `blur(${blurMap[elevation]})`,\n      boxShadow: `var(--shadow-${shadowMap[elevation]})`,\n      ...style\n    }}>\n      {children}\n    </div>\n  );\n};"
+        },
+        "TopBar": {
+          "description": "Fixed at top, displays system status, current time (UTC/local), FPS counter, connection health (WebSocket latency), active shader name, and global search button.",
+          "layout": "flex justify-between items-center px-md py-xs h-[60px]",
+          "left": [
+            "<div className='flex items-center gap-2'><img src='/assets/icons/logo.svg' alt='Heimdallr' className='h-8' /><span className='font-bold text-white'>HEIMDALLR</span></div>",
+            "<div className='ml-4 flex items-center gap-1'><span className='w-2 h-2 rounded-full bg-green-500 animate-pulse'></span><span className='text-xs text-white/70'>OPERATIONAL</span></div>"
+          ],
+          "center": [
+            "<div className='text-white/80 font-mono text-sm'>{new Date().toUTCString()}</div>",
+            "<FpsCounter />",
+            "<div className='text-white/80 text-sm'>{activeShaderLabel}</div>"
+          ],
+          "right": [
+            "<IconButton icon={Search} onClick={openSearch} aria-label='Search' tooltip='Search (/)' />",
+            "<IconButton icon={Settings} onClick={openSettings} aria-label='Settings' tooltip='Settings' />",
+            "<ConnectionStatus />"
+          ]
+        },
+        "LeftSidebar": {
+          "description": "Collapsible sidebar with layer toggles, shader selector, and quick camera bookmarks. Slides in/out with spring animation.",
+          "sections": [
+            {
+              "title": "LAYERS",
+              "items": [
+                "<LayerToggle label='Civilian Flights' icon={Plane} checked={layers.civilian} onChange={() => toggleLayer('civilian')} />",
+                "<LayerToggle label='Military Flights' icon={Sword} checked={layers.military} onChange={() => toggleLayer('military')} />",
+                "<LayerToggle label='Satellites' icon={Satellite} checked={layers.satellites} onChange={() => toggleLayer('satellites')} />",
+                "<LayerToggle label='CCTV' icon={Camera} checked={layers.cctv} onChange={() => toggleLayer('cctv')} />",
+                "<LayerToggle label='Road Traffic' icon={Car} checked={layers.traffic} onChange={() => toggleLayer('traffic')} />"
+              ]
+            },
+            {
+              "title": "SHADER",
+              "items": [
+                "<ShaderSelector label='Standard' icon={Sun} value='standard' selected={activeShader === 'standard'} onClick={() => setShader('standard')} />",
+                "<ShaderSelector label='Night Vision' icon={Moon} value='nightVision' selected={activeShader === 'nightVision'} onClick={() => setShader('nightVision')} />",
+                "<ShaderSelector label='Thermal (FLIR)' icon={Flame} value='thermal' selected={activeShader === 'thermal'} onClick={() => setShader('thermal')} />",
+                "<ShaderSelector label='CRT Monitor' icon={Monitor} value='crt' selected={activeShader === 'crt'} onClick={() => setShader('crt')} />"
+              ]
+            },
+            {
+              "title": "BOOKMARKS",
+              "items": [
+                "<BookmarkItem name='New York' onClick={() => flyToLocation(-74.006, 40.7128, 5000)} icon={MapPin} />",
+                "<BookmarkItem name='London' onClick={() => flyToLocation(-0.1276, 51.5074, 5000)} icon={MapPin} />",
+                "<BookmarkItem name='Tokyo' onClick={() => flyToLocation(139.6917, 35.6895, 5000)} icon={MapPin} />",
+                "<IconButton icon={Plus} onClick={openAddBookmarkModal} variant='outline' className='w-full mt-2'>Add current...</IconButton>"
+              ]
+            }
+          ],
+          "animation": "transform transition-transform duration-300 ease-spring",
+          "width": "280px",
+          "collapsedWidth": "0px"
+        },
+        "BottomPanel": {
+          "description": "Resizable panel that shows a list of active tracks (flights and satellites) with quick data. Tapping an item centers the camera and opens a detail card.",
+          "tabs": [
+            "Flights",
+            "Satellites",
+            "CCTV"
+          ],
+          "listItem": {
+            "icon": "entity icon",
+            "title": "flight number / satellite name",
+            "subtitle": "altitude, velocity, heading",
+            "badge": "type indicator"
+          },
+          "implementation": {
+            "tabState": "const [activeTab, setActiveTab] = useState('Flights');",
+            "flightList": "const flights = useEntityStore(state => state.civilianFlights);\nreturn Array.from(flights.values()).map(flight => <FlightListItem key={flight.id} flight={flight} />);",
+            "resize": "useResizeObserver to adjust height"
+          },
+          "height": "200px",
+          "minHeight": "100px",
+          "maxHeight": "400px"
+        },
+        "RightPanel": {
+          "description": "Contextual panel that displays CCTV thumbnails when zoomed into a city, or detailed telemetry of a selected entity. Can be minimized.",
+          "sections": [
+            {
+              "condition": "selectedEntityType === 'cctv'",
+              "title": "LIVE CCTV FEED",
+              "content": "<img src={proxiedImageUrl} className='w-full rounded-lg' /> <div className='text-xs text-white/50 mt-1'>Last updated: {timestamp}</div> <button className='mt-2 px-3 py-1 bg-blue-500 rounded text-white' onClick={applyProjectiveTexture}>Apply to buildings</button>"
+            },
+            {
+              "condition": "selectedEntityType === 'flight'",
+              "title": "FLIGHT DETAILS",
+              "content": "<div>ICAO24: {flight.icao24}</div><div>Callsign: {flight.callsign}</div><div>Altitude: {flight.alt} m</div><div>Velocity: {flight.velocity} m/s</div><div>Heading: {flight.heading}°</div><div>Last contact: {flight.lastContact}</div>"
+            },
+            {
+              "condition": "selectedEntityType === 'satellite'",
+              "title": "SATELLITE DETAILS",
+              "content": "<div>Name: {sat.name}</div><div>NORAD ID: {sat.noradId}</div><div>Altitude: {sat.alt} km</div><div>Orbit: {sat.orbitType}</div><div>Period: {sat.period} min</div>"
+            }
+          ],
+          "width": "320px",
+          "collapsedWidth": "0px"
+        },
+        "SearchOverlay": {
+          "description": "Modal overlay for global search (locations, flights, satellites, streets). Uses OpenStreetMap Nominatim for geocoding and local entity index for tracks.",
+          "header": "Search",
+          "input": "<input type='text' placeholder='Search for locations, flights, satellites...' className='w-full p-3 bg-black/50 rounded-lg text-white' value={query} onChange={handleSearch} autoFocus />",
+          "results": [
+            {
+              "category": "Locations",
+              "items": []
+            },
+            {
+              "category": "Flights",
+              "items": []
+            },
+            {
+              "category": "Satellites",
+              "items": []
+            }
+          ],
+          "implementation": {
+            "debounce": "useDebounce(query, 300)",
+            "geocoding": "fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5`)",
+            "localSearch": "filter entities by name/icao using Fuse.js",
+            "loading": "show spinner while fetching"
+          }
+        },
+        "SettingsModal": {
+          "description": "Modal for configuring app settings: units (metric/imperial), real‑time update intervals, shader parameters, keyboard shortcuts, account (if authenticated).",
+          "tabs": [
+            "General",
+            "Display",
+            "Data",
+            "Shortcuts",
+            "About",
+            "Account"
+          ],
+          "fields": {
+            "General": [
+              {
+                "label": "Units",
+                "type": "select",
+                "options": [
+                  "metric",
+                  "imperial"
+                ],
+                "value": "metric",
+                "action": "updateSettings('units')"
+              },
+              {
+                "label": "Real‑time update interval (seconds)",
+                "type": "range",
+                "min": 1,
+                "max": 30,
+                "value": 5,
+                "action": "updateSettings('updateInterval')"
+              },
+              {
+                "label": "Show FPS",
+                "type": "checkbox",
+                "checked": true,
+                "action": "toggleFPS"
+              },
+              {
+                "label": "Language",
+                "type": "select",
+                "options": [
+                  "en",
+                  "es",
+                  "fr",
+                  "de"
+                ],
+                "value": "en",
+                "action": "updateSettings('language')"
+              }
+            ],
+            "Display": [
+              {
+                "label": "Bloom intensity",
+                "type": "range",
+                "min": 0,
+                "max": 2,
+                "value": 1,
+                "action": "updateShaderUniform('bloomIntensity')"
+              },
+              {
+                "label": "Scanline density (CRT)",
+                "type": "range",
+                "min": 0,
+                "max": 2,
+                "value": 0.8,
+                "action": "updateShaderUniform('scanlineIntensity')"
+              },
+              {
+                "label": "Night vision noise",
+                "type": "range",
+                "min": 0,
+                "max": 0.5,
+                "value": 0.1,
+                "action": "updateShaderUniform('noiseAmount')"
+              },
+              {
+                "label": "Thermal palette",
+                "type": "select",
+                "options": [
+                  "Ironbow",
+                  "Rainbow",
+                  "Grayscale"
+                ],
+                "value": "Ironbow",
+                "action": "updateThermalPalette"
+              }
+            ],
+            "Data": [
+              {
+                "label": "Enable civilian flights",
+                "type": "checkbox",
+                "checked": true,
+                "action": "toggleLayer('civilian')"
+              },
+              {
+                "label": "Enable military flights",
+                "type": "checkbox",
+                "checked": true,
+                "action": "toggleLayer('military')"
+              },
+              {
+                "label": "Enable satellites",
+                "type": "checkbox",
+                "checked": true,
+                "action": "toggleLayer('satellites')"
+              },
+              {
+                "label": "Enable CCTV",
+                "type": "checkbox",
+                "checked": false,
+                "action": "toggleLayer('cctv')"
+              },
+              {
+                "label": "Enable road traffic",
+                "type": "checkbox",
+                "checked": true,
+                "action": "toggleLayer('traffic')"
+              }
+            ],
+            "Shortcuts": {
+              "content": "List of current keyboard shortcuts (read‑only).",
+              "data": [
+                {
+                  "key": "1",
+                  "action": "Toggle civilian flights"
+                },
+                {
+                  "key": "2",
+                  "action": "Toggle military flights"
+                },
+                {
+                  "key": "3",
+                  "action": "Toggle satellites"
+                },
+                {
+                  "key": "4",
+                  "action": "Toggle CCTV"
+                },
+                {
+                  "key": "5",
+                  "action": "Toggle road traffic"
+                },
+                {
+                  "key": "n",
+                  "action": "Night vision shader"
+                },
+                {
+                  "key": "t",
+                  "action": "Thermal shader"
+                },
+                {
+                  "key": "c",
+                  "action": "CRT shader"
+                },
+                {
+                  "key": "s",
+                  "action": "Standard shader"
+                },
+                {
+                  "key": "b",
+                  "action": "Toggle left sidebar"
+                },
+                {
+                  "key": "p",
+                  "action": "Toggle bottom panel"
+                },
+                {
+                  "key": "r",
+                  "action": "Toggle right panel"
+                },
+                {
+                  "key": "f",
+                  "action": "Fly to selected entity"
+                },
+                {
+                  "key": "/",
+                  "action": "Focus search"
+                },
+                {
+                  "key": "?",
+                  "action": "Show help"
+                },
+                {
+                  "key": "Esc",
+                  "action": "Close modal or clear selection"
+                }
+              ]
+            },
+            "About": {
+              "content": "Heimdallr v1.0.0 – Real‑Time Geospatial Intelligence Dashboard\n© 2025 Your Organization\nCredits: CesiumJS, Supabase, OpenStreetMap, OpenSky Network, ADS‑B Exchange, Google 3D Tiles"
+            },
+            "Account": {
+              "content": "Sign in to sync bookmarks and settings across devices.",
+              "fields": [
+                {
+                  "label": "Email",
+                  "type": "email",
+                  "placeholder": "user@example.com"
+                },
+                {
+                  "label": "Password",
+                  "type": "password"
+                }
+              ]
+            }
+          }
+        },
+        "Toast": {
+          "description": "Temporary notification messages.",
+          "variants": [
+            "info",
+            "success",
+            "warning",
+            "error"
+          ],
+          "position": "bottom-right",
+          "duration": 5000
+        }
+      }
+    },
+    "state_management": {
+      "uiStore": {
+        "library": "Zustand",
+        "storeDefinition": "import { create } from 'zustand';\nimport { persist } from 'zustand/middleware';\n\ninterface UIState {\n  layers: { civilian: boolean; military: boolean; satellites: boolean; cctv: boolean; traffic: boolean };\n  activeShader: string;\n  sidebarOpen: boolean;\n  bottomPanelOpen: boolean;\n  rightPanelOpen: boolean;\n  selectedEntityId: string | null;\n  cameraPosition: { longitude: number; latitude: number; height: number };\n  bookmarks: Array<{ name: string; camera: Camera }>;\n  settings: { units: 'metric' | 'imperial'; updateInterval: number; showFPS: boolean; language: string };\n  toggleLayer: (layer: keyof UIState['layers']) => void;\n  setShader: (shader: string) => void;\n  toggleSidebar: () => void;\n  toggleBottomPanel: () => void;\n  toggleRightPanel: () => void;\n  selectEntity: (id: string | null) => void;\n  flyTo: (entityId: string) => void;\n  addBookmark: (name: string, camera: Camera) => void;\n  removeBookmark: (name: string) => void;\n  updateSettings: (settings: Partial<UIState['settings']>) => void;\n}\n\nexport const useUIStore = create<UIState>()(\n  persist(\n    (set) => ({\n      layers: { civilian: true, military: true, satellites: true, cctv: false, traffic: true },\n      activeShader: 'standard',\n      sidebarOpen: true,\n      bottomPanelOpen: true,\n      rightPanelOpen: false,\n      selectedEntityId: null,\n      cameraPosition: { longitude: 0, latitude: 0, height: 10000000 },\n      bookmarks: [],\n      settings: { units: 'metric', updateInterval: 5, showFPS: true, language: 'en' },\n      toggleLayer: (layer) => set((state) => ({ layers: { ...state.layers, [layer]: !state.layers[layer] } })),\n      setShader: (shader) => set({ activeShader: shader }),\n      toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),\n      toggleBottomPanel: () => set((state) => ({ bottomPanelOpen: !state.bottomPanelOpen })),\n      toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),\n      selectEntity: (id) => set({ selectedEntityId: id }),\n      flyTo: (entityId) => { /* implemented in hook */ },\n      addBookmark: (name, camera) => set((state) => ({ bookmarks: [...state.bookmarks, { name, camera }] })),\n      removeBookmark: (name) => set((state) => ({ bookmarks: state.bookmarks.filter(b => b.name !== name) })),\n      updateSettings: (newSettings) => set((state) => ({ settings: { ...state.settings, ...newSettings } })),\n    }),\n    { name: 'heimdallr-ui' }\n  )\n);",
+        "actions": [
+          "toggleLayer(layer: string)",
+          "setShader(shader: string)",
+          "toggleSidebar()",
+          "toggleBottomPanel()",
+          "toggleRightPanel()",
+          "selectEntity(id: string)",
+          "flyTo(entityId: string)",
+          "addBookmark(name: string, camera: Camera)",
+          "removeBookmark(name: string)",
+          "updateSettings(settings: Partial<Settings>)"
+        ]
+      },
+      "entityStore": {
+        "description": "Mutable store using React useRef to hold references to Cesium entities. This bypasses React render cycle for performance.",
+        "structure": {
+          "civilianFlights": "Map<string, Cesium.Entity>",
+          "militaryFlights": "Map<string, Cesium.Entity>",
+          "satellites": "Map<string, Cesium.Entity>",
+          "cctvMarkers": "Map<string, Cesium.Entity>",
+          "roadParticles": "Map<string, Cesium.ParticleSystem>"
+        },
+        "methods": {
+          "addOrUpdate": "function(type: string, id: string, entity: Cesium.Entity)",
+          "remove": "function(type: string, id: string)",
+          "getAll": "function(type: string): Map<string, Cesium.Entity>"
+        },
+        "implementation": "const entityStore = useRef({\n  civilianFlights: new Map(),\n  militaryFlights: new Map(),\n  satellites: new Map(),\n  cctvMarkers: new Map(),\n  roadParticles: new Map()\n}).current;"
+      }
+    },
+    "custom_hooks": {
+      "useCesium": {
+        "description": "Provides access to the Cesium viewer instance and scene, ensuring it's only created once.",
+        "returns": "{ viewer: Cesium.Viewer | null, scene: Cesium.Scene | null }",
+        "implementation": "const viewerRef = useRef<Cesium.Viewer | null>(null);\nuseEffect(() => { if (!viewerRef.current) viewerRef.current = createViewer(container); }, []);\nreturn { viewer: viewerRef.current, scene: viewerRef.current?.scene };"
+      },
+      "useRealtimeSubscription": {
+        "description": "Subscribes to a Supabase Realtime channel and calls a callback on messages. Handles cleanup and error handling.",
+        "parameters": "channelName: string, event: string, callback: (payload: any) => void",
+        "implementation": "useEffect(() => {\n  const channel = supabase.channel(channelName).on('broadcast', { event }, callback).subscribe();\n  return () => { supabase.removeChannel(channel); };\n}, [channelName, event, callback]);"
+      },
+      "useCamera": {
+        "description": "Provides methods to fly to coordinates, entity, or bounding sphere. Uses Cesium's flyTo with smooth transitions.",
+        "methods": [
+          "flyToLocation(lon, lat, height)",
+          "flyToEntity(id)",
+          "flyToBoundingSphere(sphere)"
+        ],
+        "implementation": "const flyToLocation = (lon, lat, height) => {\n  viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lon, lat, height) });\n};"
+      },
+      "useEntitySelection": {
+        "description": "Manages selection state and highlights selected entity with a ring or outline.",
+        "returns": "{ selectedId, setSelected, clearSelection }",
+        "implementation": "const [selectedId, setSelectedId] = useState(null);\nconst setSelected = (id) => {\n  if (selectedId) removeHighlight(selectedId);\n  setSelectedId(id);\n  if (id) addHighlight(id);\n};"
+      },
+      "useKeyboardShortcuts": {
+        "description": "Registers global keyboard shortcuts for common actions.",
+        "implementation": "useEffect(() => {\n  const handler = (e) => {\n    if (e.target instanceof HTMLInputElement) return; // ignore if typing\n    switch(e.key) {\n      case '1': toggleLayer('civilian'); break;\n      case '2': toggleLayer('military'); break;\n      case '3': toggleLayer('satellites'); break;\n      case '4': toggleLayer('cctv'); break;\n      case '5': toggleLayer('traffic'); break;\n      case 'n': setShader('nightVision'); break;\n      case 't': setShader('thermal'); break;\n      case 'c': setShader('crt'); break;\n      case 's': setShader('standard'); break;\n      case 'b': toggleSidebar(); break;\n      case 'p': toggleBottomPanel(); break;\n      case 'r': toggleRightPanel(); break;\n      case 'f': if (selectedId) flyToEntity(selectedId); break;\n      case '/': openSearch(); e.preventDefault(); break;\n      case '?': openHelp(); break;\n      case 'Escape': clearSelection(); closeModals(); break;\n    }\n  };\n  window.addEventListener('keydown', handler);\n  return () => window.removeEventListener('keydown', handler);\n}, [selectedId]);"
+      },
+      "useLayerVisibility": {
+        "description": "Controls visibility of entity layers based on UI state.",
+        "implementation": "useEffect(() => {\n  entityStore.civilianFlights.forEach(entity => entity.show = layers.civilian);\n}, [layers.civilian]);"
+      },
+      "useShader": {
+        "description": "Applies selected shader to post‑process stages and updates uniforms.",
+        "implementation": "useEffect(() => {\n  shaderManager.setActive(activeShader);\n}, [activeShader]);"
+      },
+      "useCctvProjection": {
+        "description": "Handles projective texture effect for selected CCTV camera.",
+        "implementation": "const applyProjection = (cameraId) => {\n  const cam = entityStore.cctvMarkers.get(cameraId);\n  if (!cam) return;\n  const matrix = computeProjectionMatrix(cam);\n  shaderManager.setProjectionUniforms(matrix, cameraTexture);\n};"
+      },
+      "useParticleSystem": {
+        "description": "Manages creation and cleanup of particle systems for road traffic.",
+        "implementation": "useEffect(() => {\n  if (!viewer || !city) return;\n  const loadRoads = async () => {\n    const roads = await fetchRoads(city);\n    roads.forEach(road => createParticleSystem(road));\n  };\n  loadRoads();\n  return () => { /* cleanup */ };\n}, [city]);"
+      }
+    },
+    "web_workers": {
+      "sgp4.worker.ts": {
+        "description": "Performs SGP4 propagation for all active satellites. Runs every frame (60fps) and returns positions in geodetic coordinates.",
+        "messages": {
+          "init": {
+            "tles": "TLE[]"
+          },
+          "tick": {
+            "time": "JulianDate"
+          },
+          "result": {
+            "positions": "{ id: string, lon: number, lat: number, height: number }[]"
+          }
+        },
+        "optimizations": "Uses satellite.js library; caches satellite objects; uses transferable objects for array buffers.",
+        "codeSnippet": "import { propagate, twoline2satrec, eciToGeodetic, gstime } from 'satellite.js';\n\nlet satellites: { id: string; satrec: any }[] = [];\n\nself.onmessage = (e) => {\n  if (e.data.type === 'init') {\n    satellites = e.data.tles.map(tle => ({ id: tle.id, satrec: twoline2satrec(tle.line1, tle.line2) }));\n  } else if (e.data.type === 'tick') {\n    const date = new Date(e.data.time);\n    const positions = satellites.map(sat => {\n      const positionAndVelocity = propagate(sat.satrec, date);\n      const positionEci = positionAndVelocity.position;\n      const gmst = gstime(date);\n      const positionGd = eciToGeodetic(positionEci, gmst);\n      return { \n        id: sat.id, \n        lon: positionGd.longitude * 180 / Math.PI, \n        lat: positionGd.latitude * 180 / Math.PI, \n        height: positionGd.height \n      };\n    });\n    self.postMessage({ type: 'result', positions });\n  }\n};"
+      }
+    },
+    "error_handling": {
+      "ErrorBoundary": {
+        "description": "Catches errors in React component tree and displays fallback UI.",
+        "implementation": "class ErrorBoundary extends React.Component {\n  constructor(props) {\n    super(props);\n    this.state = { hasError: false };\n  }\n  static getDerivedStateFromError(error) { return { hasError: true }; }\n  componentDidCatch(error, errorInfo) { Sentry.captureException(error, { extra: errorInfo }); }\n  render() {\n    if (this.state.hasError) { return <ErrorFallback />; }\n    return this.props.children;\n  }\n}"
+      },
+      "ErrorFallback": {
+        "component": "<GlassPanel className='p-6 m-4'><h2 className='text-xl text-danger'>Something went wrong</h2><button onClick={reset}>Reload</button></GlassPanel>"
+      },
+      "retryLogic": "Axios retry with exponential backoff for failed API calls."
+    },
+    "accessibility": {
+      "aria_labels": "All interactive elements have aria-labels.",
+      "keyboard_navigation": "All panels can be navigated via Tab, with focus indicators.",
+      "focus_trap": "Modals trap focus using react-focus-lock.",
+      "color_contrast": "All text meets WCAG AA contrast ratios.",
+      "screen_reader": "Semantic HTML and ARIA live regions for dynamic updates."
+    },
+    "internationalization": {
+      "supported_languages": [
+        "en",
+        "es",
+        "fr",
+        "de",
+        "zh"
+      ],
+      "library": "next-i18next",
+      "translation_files": "public/locales/{lang}/common.json"
+    },
+    "pwa": {
+      "enabled": true,
+      "manifest": "public/manifest.json",
+      "service_worker": "next-pwa with offline fallback",
+      "offline_cache": "Map tiles and static assets"
+    },
+    "analytics": {
+      "provider": "Plausible or custom",
+      "events": [
+        "page_view",
+        "layer_toggle",
+        "shader_change",
+        "search",
+        "fly_to",
+        "error"
+      ]
+    }
+  },
+  "backend_architecture": {
+    "overview": "The backend is a collection of Node.js microservices (or a single modular service) deployed on Render. It handles all external API communication, data normalization, and real‑time broadcasting to Supabase. It also serves as a CORS proxy for mixed‑content resources.",
+    "services": [
+      {
+        "name": "api-aggregator",
+        "runtime": "Node.js 20 + Fastify",
+        "responsibilities": [
+          "Poll OpenSky Network API for civilian flights (authenticated, with bounding box optimization).",
+          "Poll ADS‑B Exchange API for military flights.",
+          "Fetch TLEs from Celestrak daily and store in Supabase.",
+          "Query OpenStreetMap Overpass API for road networks on demand.",
+          "Fetch CCTV images from municipal servers and serve via proxy or broadcast.",
+          "Broadcast normalized telemetry to Supabase Realtime channels."
+        ],
+        "environment_variables": [
+          "OPENSKY_USERNAME",
+          "OPENSKY_PASSWORD",
+          "ADSBX_API_KEY",
+          "SUPABASE_URL",
+          "SUPABASE_SERVICE_ROLE_KEY",
+          "CELESTRAK_URL",
+          "PORT",
+          "REDIS_URL (optional for caching)",
+          "SENTRY_DSN"
+        ],
+        "endpoints": {
+          "/health": "GET – health check",
+          "/proxy/cctv": "GET – proxies CCTV image (url query parameter)",
+          "/api/roads/:city": "GET – triggers Overpass query and stores result (admin only)",
+          "/metrics": "GET – Prometheus metrics"
+        },
+        "cron_jobs": [
+          {
+            "schedule": "*/5 * * * * *",
+            "task": "pollOpenSky()"
+          },
+          {
+            "schedule": "*/5 * * * * *",
+            "task": "pollADSBC()"
+          },
+          {
+            "schedule": "0 0 * * *",
+            "task": "fetchTLEs()"
+          }
+        ],
+        "implementation_details": {
+          "pollOpenSky": {
+            "code": "import axios from 'axios';\nimport { supabase } from './supabaseClient';\n\nasync function pollOpenSky() {\n  try {\n    const bbox = await getCurrentBboxFromFrontend(); // stored in Redis or Supabase\n    const response = await axios.get('https://opensky-network.org/api/states/all', {\n      params: { lamin: bbox.south, lomin: bbox.west, lamax: bbox.north, lomax: bbox.east },\n      auth: { username: process.env.OPENSKY_USERNAME, password: process.env.OPENSKY_PASSWORD },\n      timeout: 10000\n    });\n    const normalized = response.data.states.map(state => ({\n      icao24: state[0],\n      lat: state[6],\n      lon: state[5],\n      alt: state[7] * 0.3048, // convert feet to meters\n      velocity: state[9] * 0.514444, // knots to m/s\n      heading: state[3]\n    }));\n    await supabase.channel('flights:civilian').send({ type: 'broadcast', event: 'update', payload: normalized });\n  } catch (error) {\n    console.error('OpenSky poll failed', error);\n    // Implement retry logic\n  }\n}"
+          },
+          "pollADSBC": {
+            "code": "async function pollADSBC() {\n  const coords = ['40,-74', '51,-0.1', '35,139']; // strategic points\n  for (const coord of coords) {\n    try {\n      const response = await axios.get(`https://adsbexchange.com/api/aircraft/lat/${coord.split(',')[0]}/lon/${coord.split(',')[1]}/dist/5/`, {\n        headers: { 'api-auth': process.env.ADSBX_API_KEY },\n        timeout: 10000\n      });\n      const military = response.data.ac.filter(a => a.military === true);\n      const normalized = military.map(a => ({\n        icao24: a.hex,\n        lat: a.lat,\n        lon: a.lon,\n        alt: a.alt,\n        speed: a.speed,\n        track: a.track,\n        type: a.t\n      }));\n      await supabase.channel('flights:military').send({ type: 'broadcast', event: 'update', payload: normalized });\n    } catch (error) {\n      console.error('ADS‑B Exchange poll failed', error);\n    }\n  }\n}"
+          },
+          "fetchTLEs": {
+            "code": "async function fetchTLEs() {\n  try {\n    const response = await axios.get('https://celestrak.com/NORAD/elements/gp.php?GROUP=active&FORMAT=tle', { timeout: 30000 });\n    const lines = response.data.split('\\n');\n    const tles = [];\n    for (let i = 0; i < lines.length; i += 3) {\n      if (lines[i] && lines[i+1] && lines[i+2]) {\n        tles.push({ id: `sat-${i}`, name: lines[i].trim(), line1: lines[i+1], line2: lines[i+2] });\n      }\n    }\n    await supabase.from('tle_snapshots').insert({ tle_data: tles });\n  } catch (error) {\n    console.error('TLE fetch failed', error);\n  }\n}"
+          }
+        }
+      },
+      {
+        "name": "cctv-proxy",
+        "runtime": "Node.js + Fastify",
+        "responsibilities": "Proxies CCTV images from mixed‑content HTTP sources.",
+        "endpoints": {
+          "/proxy/cctv": "GET – returns image with CORS headers"
+        },
+        "caching": "node-cache with 30s TTL",
+        "rate_limit": "100 requests per minute per IP"
+      },
+      {
+        "name": "auth-service",
+        "runtime": "Node.js + Fastify",
+        "responsibilities": "Handles user authentication via Supabase Auth, JWT validation.",
+        "endpoints": {
+          "/auth/login": "POST – login",
+          "/auth/logout": "POST – logout",
+          "/auth/register": "POST – register"
+        }
+      }
+    ],
+    "data_normalization": {
+      "openSky": {
+        "input": "OpenSky API response (list of state vectors)",
+        "output": {
+          "icao24": "string",
+          "lat": "number",
+          "lon": "number",
+          "alt": "number",
+          "velocity": "number",
+          "heading": "number"
+        },
+        "broadcast_channel": "flights:civilian"
+      },
+      "adsbExchange": {
+        "input": "ADS‑B Exchange API response",
+        "output": {
+          "icao24": "string",
+          "lat": "number",
+          "lon": "number",
+          "alt": "number",
+          "speed": "number",
+          "track": "number",
+          "type": "string"
+        },
+        "broadcast_channel": "flights:military"
+      },
+      "tle": {
+        "input": "Celestrak bulk TLE (text)",
+        "output": "JSON array of { id, name, line1, line2 }",
+        "storage": "table tle_snapshots"
+      },
+      "roadNetwork": {
+        "input": "Overpass API response (ways and nodes)",
+        "output": "GeoJSON LineString with interpolated points",
+        "storage": "table road_networks"
+      },
+      "cctv": {
+        "input": "Municipal CCTV metadata (from manual import or discovery)",
+        "output": "record with location, url, heading, pitch",
+        "storage": "table cctv_cameras"
+      }
+    },
+    "proxying": {
+      "cctv_proxy": {
+        "endpoint": "/proxy/cctv",
+        "method": "GET",
+        "parameters": {
+          "url": "string (encoded URL of the image)"
+        },
+        "behavior": "Fetches the image from the given URL, sets appropriate CORS headers, and returns the image. Handles HTTP vs HTTPS mixed content.",
+        "caching": "Cache images for 30 seconds to reduce load on municipal servers.",
+        "implementation": "fastify.get('/proxy/cctv', async (req, reply) => {\n  const url = decodeURIComponent(req.query.url);\n  const cached = cache.get(url);\n  if (cached) { \n    reply.type('image/jpeg').send(cached); \n    return; \n  }\n  try {\n    const response = await axios.get(url, { \n      responseType: 'arraybuffer',\n      timeout: 5000,\n      headers: { 'User-Agent': 'Heimdallr/1.0' }\n    });\n    cache.set(url, response.data, 30);\n    reply.type('image/jpeg').send(response.data);\n  } catch (error) {\n    reply.status(502).send('Failed to fetch CCTV image');\n  }\n});"
+      }
+    },
+    "rate_limiting_and_retries": {
+      "openSky": "Authenticated: 4,000 credits/day; use bounding box to limit cost; implement exponential backoff on errors.",
+      "adsbExchange": "Commercial limits; cache responses where possible; use rotating keys if needed.",
+      "overpass": "Respect Overpass API's rate limits; queue requests with delays.",
+      "proxy": "IP‑based rate limiting: 100 requests/min."
+    },
+    "security": {
+      "api_keys": "All sensitive keys stored in Render environment variables, never exposed to client.",
+      "cors": "Proxy endpoints have restrictive CORS (only allow Heimdallr frontend origin).",
+      "rate_limiting": "Implement IP‑based rate limiting on proxy endpoints to prevent abuse.",
+      "authentication": "Optional: JWT authentication for user‑specific features (bookmarks, settings) via Supabase Auth.",
+      "helmet": "Use Fastify Helmet for security headers.",
+      "input_validation": "Zod validation on all endpoints.",
+      "sql_injection": "Use parameterized queries via Supabase client."
+    },
+    "logging_and_monitoring": {
+      "logger": "pino with pretty printing in development, JSON in production",
+      "sentry": "Capture errors and performance metrics",
+      "health_check": "/health returns 200 OK with service status",
+      "metrics": "/metrics endpoint for Prometheus scraping"
+    }
+  },
+  "database_architecture": {
+    "schema": {
+      "tables": [
+        {
+          "name": "cctv_cameras",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "default": "gen_random_uuid()",
+              "primaryKey": true
+            },
+            {
+              "name": "location",
+              "type": "geography(Point, 4326)",
+              "notNull": true
+            },
+            {
+              "name": "source_url",
+              "type": "text",
+              "notNull": true
+            },
+            {
+              "name": "heading",
+              "type": "float",
+              "notNull": true,
+              "description": "Compass heading in degrees"
+            },
+            {
+              "name": "pitch",
+              "type": "float",
+              "notNull": true,
+              "description": "Camera pitch in degrees"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamptz",
+              "default": "now()"
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamptz",
+              "default": "now()"
+            }
+          ],
+          "indexes": [
+            "location",
+            "created_at"
+          ],
+          "realtime": "enabled (for postgres_changes)"
+        },
+        {
+          "name": "road_networks",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "default": "gen_random_uuid()",
+              "primaryKey": true
+            },
+            {
+              "name": "city",
+              "type": "text",
+              "notNull": true
+            },
+            {
+              "name": "way",
+              "type": "geometry(LineString, 4326)",
+              "notNull": true
+            },
+            {
+              "name": "highway_type",
+              "type": "text"
+            },
+            {
+              "name": "interpolated_points",
+              "type": "jsonb",
+              "description": "Array of [lng, lat] coordinates for particle emission"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamptz",
+              "default": "now()"
+            }
+          ],
+          "indexes": [
+            "city",
+            "way"
+          ],
+          "realtime": "enabled"
+        },
+        {
+          "name": "tle_snapshots",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "default": "gen_random_uuid()",
+              "primaryKey": true
+            },
+            {
+              "name": "fetched_at",
+              "type": "timestamptz",
+              "default": "now()"
+            },
+            {
+              "name": "tle_data",
+              "type": "jsonb",
+              "notNull": true
+            }
+          ],
+          "indexes": [
+            "fetched_at"
+          ],
+          "realtime": "not needed (fetched once at startup)"
+        },
+        {
+          "name": "profiles",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "references": "auth.users(id)",
+              "primaryKey": true
+            },
+            {
+              "name": "favorite_layers",
+              "type": "text[]"
+            },
+            {
+              "name": "default_shader",
+              "type": "text"
+            },
+            {
+              "name": "bookmarks",
+              "type": "jsonb",
+              "description": "Array of { name, camera }"
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamptz",
+              "default": "now()"
+            }
+          ],
+          "realtime": "enabled (for user‑specific sync)"
+        },
+        {
+          "name": "analytics_events",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "default": "gen_random_uuid()",
+              "primaryKey": true
+            },
+            {
+              "name": "user_id",
+              "type": "uuid",
+              "nullable": true
+            },
+            {
+              "name": "event_type",
+              "type": "text"
+            },
+            {
+              "name": "payload",
+              "type": "jsonb"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamptz",
+              "default": "now()"
+            }
+          ],
+          "indexes": [
+            "event_type",
+            "created_at"
+          ],
+          "realtime": false
+        }
+      ]
+    },
+    "realtime_configuration": {
+      "broadcast": {
+        "channels": [
+          {
+            "name": "flights:civilian",
+            "type": "broadcast",
+            "acl": "public"
+          },
+          {
+            "name": "flights:military",
+            "type": "broadcast",
+            "acl": "public"
+          }
+        ]
+      },
+      "postgres_changes": {
+        "tables": [
+          "cctv_cameras",
+          "road_networks",
+          "profiles"
+        ]
+      }
+    },
+    "row_level_security": {
+      "profiles": "Users can only read/update their own profile.",
+      "cctv_cameras": "Public read, system write (via service role).",
+      "road_networks": "Public read, system write.",
+      "analytics_events": "Insert only via service role."
+    },
+    "migrations": {
+      "001_initial.sql": "CREATE EXTENSION postgis; CREATE TABLE cctv_cameras ...",
+      "002_road_networks.sql": "CREATE TABLE road_networks ...",
+      "003_tle_snapshots.sql": "CREATE TABLE tle_snapshots ...",
+      "004_profiles.sql": "CREATE TABLE profiles ...",
+      "005_analytics.sql": "CREATE TABLE analytics_events ..."
+    },
+    "backup": {
+      "schedule": "Daily at 02:00 UTC",
+      "retention": "30 days",
+      "point_in_time_recovery": true
+    }
+  },
+  "frontend_pages": {
+    "index.tsx": {
+      "route": "/",
+      "title": "Heimdallr – Geospatial Intelligence Dashboard",
+      "layout": "Full‑screen map with overlays",
+      "sections": [
+        {
+          "name": "TopBar",
+          "component": "TopBar",
+          "position": "fixed top-0 left-0 right-0 z-50"
+        },
+        {
+          "name": "LeftSidebar",
+          "component": "LeftSidebar",
+          "position": "fixed top-[60px] left-0 bottom-0 w-[280px] z-40 transform transition-transform duration-300",
+          "condition": "sidebarOpen"
+        },
+        {
+          "name": "BottomPanel",
+          "component": "BottomPanel",
+          "position": "fixed bottom-0 left-0 right-0 h-[200px] z-30 transform transition-transform",
+          "condition": "bottomPanelOpen"
+        },
+        {
+          "name": "RightPanel",
+          "component": "RightPanel",
+          "position": "fixed top-[60px] right-0 bottom-[200px] w-[320px] z-30 transform transition-transform",
+          "condition": "rightPanelOpen"
+        },
+        {
+          "name": "SearchOverlay",
+          "component": "SearchOverlay",
+          "position": "fixed inset-0 z-60",
+          "condition": "searchOpen"
+        },
+        {
+          "name": "SettingsModal",
+          "component": "SettingsModal",
+          "position": "fixed inset-0 z-70",
+          "condition": "settingsOpen"
+        },
+        {
+          "name": "KeyboardShortcutsHelp",
+          "component": "KeyboardShortcutsHelp",
+          "position": "fixed inset-0 z-80",
+          "condition": "helpOpen"
+        }
+      ],
+      "exact_content": {
+        "TopBar": {
+          "left": [
+            "<div className='flex items-center gap-2'><img src='/assets/icons/logo.svg' alt='Heimdallr' className='h-8' /><span className='font-bold text-white'>HEIMDALLR</span></div>",
+            "<div className='ml-4 flex items-center gap-1'><span className='w-2 h-2 rounded-full bg-green-500 animate-pulse'></span><span className='text-xs text-white/70'>OPERATIONAL</span></div>"
+          ],
+          "center": [
+            "<div className='text-white/80 font-mono text-sm'>{new Date().toUTCString()}</div>",
+            "<FpsCounter />",
+            "<div className='text-white/80 text-sm'>{activeShaderLabel}</div>"
+          ],
+          "right": [
+            "<IconButton icon={Search} onClick={openSearch} aria-label='Search' tooltip='Search (/)' />",
+            "<IconButton icon={Settings} onClick={openSettings} aria-label='Settings' tooltip='Settings' />",
+            "<ConnectionStatus />"
+          ]
+        },
+        "LeftSidebar": {
+          "sections": [
+            {
+              "title": "LAYERS",
+              "items": [
+                "<LayerToggle label='Civilian Flights' icon={Plane} checked={layers.civilian} onChange={() => toggleLayer('civilian')} />",
+                "<LayerToggle label='Military Flights' icon={Sword} checked={layers.military} onChange={() => toggleLayer('military')} />",
+                "<LayerToggle label='Satellites' icon={Satellite} checked={layers.satellites} onChange={() => toggleLayer('satellites')} />",
+                "<LayerToggle label='CCTV' icon={Camera} checked={layers.cctv} onChange={() => toggleLayer('cctv')} />",
+                "<LayerToggle label='Road Traffic' icon={Car} checked={layers.traffic} onChange={() => toggleLayer('traffic')} />"
+              ]
+            },
+            {
+              "title": "SHADER",
+              "items": [
+                "<ShaderSelector label='Standard' icon={Sun} value='standard' selected={activeShader === 'standard'} onClick={() => setShader('standard')} />",
+                "<ShaderSelector label='Night Vision' icon={Moon} value='nightVision' selected={activeShader === 'nightVision'} onClick={() => setShader('nightVision')} />",
+                "<ShaderSelector label='Thermal (FLIR)' icon={Flame} value='thermal' selected={activeShader === 'thermal'} onClick={() => setShader('thermal')} />",
+                "<ShaderSelector label='CRT Monitor' icon={Monitor} value='crt' selected={activeShader === 'crt'} onClick={() => setShader('crt')} />"
+              ]
+            },
+            {
+              "title": "BOOKMARKS",
+              "items": [
+                "<BookmarkItem name='New York' onClick={() => flyToLocation(-74.006, 40.7128, 5000)} icon={MapPin} />",
+                "<BookmarkItem name='London' onClick={() => flyToLocation(-0.1276, 51.5074, 5000)} icon={MapPin} />",
+                "<BookmarkItem name='Tokyo' onClick={() => flyToLocation(139.6917, 35.6895, 5000)} icon={MapPin} />",
+                "<IconButton icon={Plus} onClick={openAddBookmarkModal} variant='outline' className='w-full mt-2'>Add current...</IconButton>"
+              ]
+            }
+          ]
+        },
+        "BottomPanel": {
+          "tabs": [
+            {
+              "name": "Flights",
+              "content": [
+                "<div className='p-2 text-white/70'>Live Civilian Flights: {civilianFlightsCount}</div>",
+                "<div className='overflow-auto h-full'>",
+                "  {Array.from(civilianFlights.values()).map(flight => (",
+                "    <div key={flight.id} className='glass-panel p-2 mb-2 flex items-center gap-3 cursor-pointer hover:bg-white/10' onClick={() => selectEntity(flight.id)}>",
+                "      <Plane className='text-white' size={16} />",
+                "      <div className='flex-1'>",
+                "        <div className='text-white font-medium'>{flight.callsign || flight.icao24}</div>",
+                "        <div className='text-xs text-white/50'>{flight.alt} m • {flight.velocity} m/s • {flight.heading}°</div>",
+                "      </div>",
+                "    </div>",
+                "  ))}",
+                "</div>"
+              ]
+            },
+            {
+              "name": "Satellites",
+              "content": [
+                "<div className='p-2 text-white/70'>Active Satellites: {satellitesCount}</div>",
+                "<div className='overflow-auto h-full'>",
+                "  {Array.from(satellites.values()).map(sat => (",
+                "    <div key={sat.id} className='glass-panel p-2 mb-2 flex items-center gap-3 cursor-pointer hover:bg-white/10' onClick={() => selectEntity(sat.id)}>",
+                "      <Satellite className='text-white' size={16} />",
+                "      <div className='flex-1'>",
+                "        <div className='text-white font-medium'>{sat.name}</div>",
+                "        <div className='text-xs text-white/50'>{sat.alt} km • {sat.orbitType}</div>",
+                "      </div>",
+                "    </div>",
+                "  ))}",
+                "</div>"
+              ]
+            },
+            {
+              "name": "CCTV",
+              "content": "<CctvThumbnailGrid />"
+            }
+          ]
+        },
+        "RightPanel": {
+          "sections": [
+            {
+              "condition": "selectedEntityType === 'cctv'",
+              "title": "LIVE CCTV FEED",
+              "content": "<img src={proxiedImageUrl} className='w-full rounded-lg' /> <div className='text-xs text-white/50 mt-1'>Last updated: {timestamp}</div> <button className='mt-2 px-3 py-1 bg-blue-500 rounded text-white' onClick={applyProjectiveTexture}>Apply to buildings</button>"
+            },
+            {
+              "condition": "selectedEntityType === 'flight'",
+              "title": "FLIGHT DETAILS",
+              "content": "<div>ICAO24: {flight.icao24}</div><div>Callsign: {flight.callsign}</div><div>Altitude: {flight.alt} m</div><div>Velocity: {flight.velocity} m/s</div><div>Heading: {flight.heading}°</div><div>Last contact: {flight.lastContact}</div>"
+            },
+            {
+              "condition": "selectedEntityType === 'satellite'",
+              "title": "SATELLITE DETAILS",
+              "content": "<div>Name: {sat.name}</div><div>NORAD ID: {sat.noradId}</div><div>Altitude: {sat.alt} km</div><div>Orbit: {sat.orbitType}</div><div>Period: {sat.period} min</div>"
+            }
+          ]
+        },
+        "SearchOverlay": {
+          "header": "Search",
+          "input": "<input type='text' placeholder='Search for locations, flights, satellites...' className='w-full p-3 bg-black/50 rounded-lg text-white' value={query} onChange={handleSearch} autoFocus />",
+          "results": [
+            {
+              "category": "Locations",
+              "items": []
+            },
+            {
+              "category": "Flights",
+              "items": []
+            },
+            {
+              "category": "Satellites",
+              "items": []
+            }
+          ]
+        },
+        "SettingsModal": {
+          "tabs": [
+            {
+              "name": "General",
+              "fields": [
+                {
+                  "label": "Units",
+                  "type": "select",
+                  "options": [
+                    "metric",
+                    "imperial"
+                  ],
+                  "value": "metric"
+                },
+                {
+                  "label": "Real‑time update interval (seconds)",
+                  "type": "range",
+                  "min": 1,
+                  "max": 30,
+                  "value": 5
+                },
+                {
+                  "label": "Show FPS",
+                  "type": "checkbox",
+                  "checked": true
+                },
+                {
+                  "label": "Language",
+                  "type": "select",
+                  "options": [
+                    "en",
+                    "es",
+                    "fr",
+                    "de"
+                  ],
+                  "value": "en"
+                }
+              ]
+            },
+            {
+              "name": "Display",
+              "fields": [
+                {
+                  "label": "Bloom intensity",
+                  "type": "range",
+                  "min": 0,
+                  "max": 2,
+                  "value": 1
+                },
+                {
+                  "label": "Scanline density (CRT)",
+                  "type": "range",
+                  "min": 0,
+                  "max": 2,
+                  "value": 0.8
+                },
+                {
+                  "label": "Night vision noise",
+                  "type": "range",
+                  "min": 0,
+                  "max": 0.5,
+                  "value": 0.1
+                }
+              ]
+            },
+            {
+              "name": "Data",
+              "fields": [
+                {
+                  "label": "Enable civilian flights",
+                  "type": "checkbox",
+                  "checked": true
+                },
+                {
+                  "label": "Enable military flights",
+                  "type": "checkbox",
+                  "checked": true
+                },
+                {
+                  "label": "Enable satellites",
+                  "type": "checkbox",
+                  "checked": true
+                },
+                {
+                  "label": "Enable CCTV",
+                  "type": "checkbox",
+                  "checked": false
+                },
+                {
+                  "label": "Enable road traffic",
+                  "type": "checkbox",
+                  "checked": true
+                }
+              ]
+            },
+            {
+              "name": "Shortcuts",
+              "content": "List of current keyboard shortcuts (read‑only)."
+            },
+            {
+              "name": "About",
+              "content": "Heimdallr v1.0.0 – Real‑Time Geospatial Intelligence Dashboard"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "navigation": {
+    "type": "single‑page application with overlay panels",
+    "interactions": [
+      {
+        "action": "Toggle left sidebar",
+        "trigger": "Button in top bar or keyboard shortcut 'b'",
+        "animation": "Spring slide from left"
+      },
+      {
+        "action": "Toggle bottom panel",
+        "trigger": "Button in top bar or keyboard shortcut 'p'",
+        "animation": "Spring slide from bottom"
+      },
+      {
+        "action": "Toggle right panel",
+        "trigger": "Button in top bar or keyboard shortcut 'r'",
+        "animation": "Spring slide from right"
+      },
+      {
+        "action": "Open search",
+        "trigger": "Click search icon or keyboard shortcut '/'",
+        "animation": "Fade in with blur backdrop"
+      },
+      {
+        "action": "Open settings",
+        "trigger": "Click gear icon",
+        "animation": "Scale and fade"
+      },
+      {
+        "action": "Select entity",
+        "trigger": "Click on map point or list item",
+        "behavior": "Highlights entity, opens right panel with details, optionally flies to entity if double‑clicked"
+      },
+      {
+        "action": "Fly to bookmark",
+        "trigger": "Click bookmark in left sidebar",
+        "behavior": "Smooth camera transition using flyToBoundingSphere or flyTo"
+      },
+      {
+        "action": "Change shader",
+        "trigger": "Click shader option in left sidebar",
+        "behavior": "Applies corresponding post‑process stage and updates UI theme colors"
+      },
+      {
+        "action": "Toggle layer",
+        "trigger": "Toggle switch in left sidebar",
+        "behavior": "Shows/hides corresponding entity layer"
+      }
+    ],
+    "keyboard_shortcuts": {
+      "1": "Toggle civilian flights",
+      "2": "Toggle military flights",
+      "3": "Toggle satellites",
+      "4": "Toggle CCTV",
+      "5": "Toggle road traffic",
+      "n": "Night vision shader",
+      "t": "Thermal shader",
+      "c": "CRT shader",
+      "s": "Standard shader",
+      "b": "Toggle left sidebar",
+      "p": "Toggle bottom panel",
+      "r": "Toggle right panel",
+      "f": "Fly to selected entity",
+      "/": "Focus search",
+      "?": "Show help",
+      "Esc": "Close modal or clear selection"
+    },
+    "camera_navigation": {
+      "mouse": "Drag to rotate, scroll to zoom, right‑drag to pan",
+      "touch": "Pinch to zoom, two‑finger rotate",
+      "programmatic": "flyToLocation, flyToEntity, flyToBoundingSphere"
+    }
+  },
+  "api_integration": {
+    "external_apis": [
+      {
+        "name": "OpenSky Network",
+        "type": "REST",
+        "endpoint": "https://opensky-network.org/api/states/all",
+        "authentication": "Basic Auth (username/password)",
+        "rate_limits": "4000 credits/day authenticated, 400 anonymous",
+        "usage": "Poll every 5 seconds with current viewport bounding box to reduce credits."
+      },
+      {
+        "name": "ADS‑B Exchange",
+        "type": "REST",
+        "endpoint": "https://adsbexchange.com/api/aircraft/",
+        "authentication": "API Key (header)",
+        "rate_limits": "Commercial terms",
+        "usage": "Poll military endpoint /mil/ for global strategic coordinates every 5 seconds."
+      },
+      {
+        "name": "Celestrak",
+        "type": "TXT",
+        "endpoint": "https://celestrak.com/NORAD/elements/gp.php?GROUP=active&FORMAT=tle",
+        "authentication": "None",
+        "usage": "Fetch once daily, parse and store in database."
+      },
+      {
+        "name": "OpenStreetMap Overpass API",
+        "type": "REST",
+        "endpoint": "https://overpass-api.de/api/interpreter",
+        "authentication": "None (respect rate limits)",
+        "usage": "Query road networks for cities on demand."
+      },
+      {
+        "name": "Austin CCTV (example)",
+        "type": "HTTP (mixed content)",
+        "endpoint": "http://www.austintexas.gov/trafficcameras/camera/...",
+        "authentication": "None",
+        "usage": "Fetch images via backend proxy every 30–60 seconds."
+      },
+      {
+        "name": "Google 3D Tiles",
+        "type": "REST",
+        "endpoint": "https://tile.googleapis.com/v1/3dtiles/root.json",
+        "authentication": "API Key (query param)",
+        "rate_limits": "Pay per use",
+        "usage": "Loaded once at startup."
+      }
+    ],
+    "internal_endpoints": {
+      "GET /proxy/cctv": {
+        "description": "Proxies CCTV image from municipal server.",
+        "parameters": {
+          "url": "encoded URL"
+        },
+        "response": "image/jpeg"
+      },
+      "GET /api/roads/:city": {
+        "description": "Triggers Overpass query for a city's major roads, stores in DB, returns GeoJSON.",
+        "authentication": "Optional (admin key)",
+        "response": "GeoJSON FeatureCollection"
+      }
+    }
+  },
+  "deployment": {
+    "frontend": {
+      "platform": "Vercel",
+      "build_command": "next build",
+      "output_directory": ".next",
+      "environment_variables": [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY",
+        "NEXT_PUBLIC_SENTRY_DSN"
+      ],
+      "custom_config": {
+        "vercel.json": {
+          "headers": [
+            {
+              "source": "/(.*)",
+              "headers": [
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "1; mode=block"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "strict-origin-when-cross-origin"
+                },
+                {
+                  "key": "Content-Security-Policy",
+                  "value": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.googleapis.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://opensky-network.org https://adsbexchange.com https://celestrak.com https://overpass-api.de; font-src 'self';"
+                }
+              ]
+            }
+          ]
+        },
+        "next.config.js": {
+          "webpack": "custom config to copy Cesium workers and assets to public folder",
+          "transpilePackages": [
+            "@supabase/supabase-js",
+            "lucide-react",
+            "framer-motion"
+          ],
+          "images": {
+            "domains": [
+              "tile.googleapis.com"
+            ]
+          },
+          "redirects": [],
+          "rewrites": []
+        }
+      }
+    },
+    "backend": {
+      "platform": "Render",
+      "service_type": "Web Service",
+      "runtime": "Node.js",
+      "build_command": "npm install && npm run build",
+      "start_command": "npm start",
+      "environment_variables": [
+        "OPENSKY_USERNAME",
+        "OPENSKY_PASSWORD",
+        "ADSBX_API_KEY",
+        "SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "CELESTRAK_URL",
+        "PORT",
+        "SENTRY_DSN",
+        "REDIS_URL"
+      ],
+      "scaling": {
+        "min_instances": 1,
+        "max_instances": 5,
+        "auto_scaling": "based on CPU"
+      },
+      "health_check_path": "/health",
+      "dockerfile": "FROM node:20-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\nEXPOSE 3001\nCMD [\"node\", \"dist/index.js\"]"
+    },
+    "database": {
+      "platform": "Supabase",
+      "project_creation": "Create new project, enable PostGIS extension.",
+      "migrations": "Use Supabase migrations (SQL files) to set up schema and RLS.",
+      "realtime": "Enable Realtime for broadcast and selected tables via Supabase dashboard."
+    },
+    "ci_cd": {
+      "github_actions": {
+        "frontend": {
+          "on": "push to main",
+          "steps": [
+            "checkout",
+            "install",
+            "lint",
+            "test",
+            "build",
+            "deploy to Vercel"
+          ]
+        },
+        "backend": {
+          "on": "push to main",
+          "steps": [
+            "checkout",
+            "install",
+            "lint",
+            "test",
+            "build Docker image",
+            "deploy to Render"
+          ]
+        }
+      }
+    }
+  },
+  "performance_optimizations": {
+    "frontend": {
+      "web_workers": "Offload SGP4 calculations to worker.",
+      "dead_reckoning": "Use SampledPositionProperty to interpolate between 5‑second updates.",
+      "frustum_culling": "Cesium automatically culls tiles and entities.",
+      "dynamic_road_loading": "Load road networks only for current viewport, unload when leaving.",
+      "texture_atlas": "Combine multiple CCTV thumbnails into a single atlas for fewer draw calls.",
+      "memoization": "Use React.memo for UI components that don't change often.",
+      "lazy_loading": "Load heavy 3D models only when needed.",
+      "gpu_memory_management": "Limit maximum tile memory usage in Cesium.",
+      "request_animation_frame": "Throttle non‑critical updates to 30fps.",
+      "bundle_optimization": "Use Next.js dynamic imports for heavy components.",
+      "code_splitting": "Split vendor chunks (Cesium) into separate bundle.",
+      "image_optimization": "Next.js Image component for static images.",
+      "tree_shaking": "Remove unused Cesium modules via custom build."
+    },
+    "backend": {
+      "caching": "Cache CCTV images for 30 seconds.",
+      "connection_pooling": "Use pgBouncer (or Supabase pooler) for database connections.",
+      "rate_limiting": "Implement rate limiting to avoid hitting API limits.",
+      "data_compression": "Compress TLE data before sending to client.",
+      "background_jobs": "Use separate worker threads for heavy API polling.",
+      "redis": "Optional Redis for distributed caching.",
+      "database_indexes": "Spatial indexes on geometry columns."
+    }
+  },
+  "testing_strategy": {
+    "unit_tests": "Jest for backend, React Testing Library for frontend components.",
+    "integration_tests": "Test end‑to‑end flows: real‑time data ingestion, camera navigation, shader toggling.",
+    "performance_tests": "Lighthouse for frontend performance, k6 for backend load testing.",
+    "security_tests": "OWASP ZAP for vulnerability scanning.",
+    "e2e_tests": "Cypress for critical user journeys (search, select, fly to).",
+    "coverage": "Minimum 80% coverage.",
+    "test_data": "Mock API responses using MSW (Mock Service Worker).",
+    "load_testing": "Simulate 1000 concurrent users with k6."
+  },
+  "monitoring_and_logging": {
+    "frontend": "Sentry for error tracking, Vercel Analytics for performance, LogRocket for session replay.",
+    "backend": "Logging to stdout (captured by Render), use Sentry for errors, Prometheus metrics (optional), Grafana dashboards.",
+    "database": "Supabase provides monitoring and logs, custom SQL monitoring for slow queries.",
+    "alerts": "Set up alerts for backend API failures, high latency, or database errors via Slack/email.",
+    "uptime": "Render uptime monitoring, Uptime Robot.",
+    "cost_monitoring": "Vercel and Render dashboards for cost tracking."
+  },
+  "security": {
+    "authentication": "Supabase Auth with JWT, optional OAuth providers (Google, GitHub).",
+    "authorization": "RLS policies in Supabase.",
+    "api_keys": "All keys stored in environment variables.",
+    "cors": "Restrictive CORS policy.",
+    "csp": "Content Security Policy headers.",
+    "helmet": "Security headers.",
+    "rate_limiting": "Per IP rate limiting on proxy endpoints.",
+    "input_validation": "Zod validation on all backend endpoints.",
+    "sql_injection": "Parameterized queries.",
+    "xss": "React escapes by default, CSP helps.",
+    "csrf": "Supabase uses JWT, no CSRF risk."
+  },
+  "future_enhancements": {
+    "authentication": "Add Supabase Auth for personalized bookmarks and settings.",
+    "historical_playback": "Allow users to replay past telemetry data.",
+    "more_data_sources": "Incorporate maritime traffic (AIS), weather radar, social media geofeeds.",
+    "mobile_app": "React Native wrapper for iOS/Android.",
+    "vr_support": "WebXR integration for immersive viewing.",
+    "machine_learning": "Anomaly detection in flight patterns.",
+    "voice_control": "Voice commands for hands‑free operation.",
+    "collaboration": "Shared views and annotations for team analysis.",
+    "export": "Export screenshots, video, or data as CSV/GeoJSON.",
+    "offline_mode": "Service worker caching for offline use."
+  },
+  "glossary": {
+    "ADS‑B": "Automatic Dependent Surveillance–Broadcast",
+    "CesiumJS": "JavaScript library for 3D globes and maps",
+    "CZML": "Cesium Language – JSON format for describing time‑dynamic scenes",
+    "FLIR": "Forward Looking Infrared",
+    "GLSL": "OpenGL Shading Language",
+    "ICAO24": "Unique 24‑bit address assigned to aircraft transponders",
+    "PostGIS": "Spatial extension for PostgreSQL",
+    "SGP4": "Simplified General Perturbations model for satellite orbit propagation",
+    "TLE": "Two‑Line Element set",
+    "WebGL": "Web Graphics Library",
+    "WGS84": "World Geodetic System 1984"
+  }
+}

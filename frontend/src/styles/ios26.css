@@ -1,0 +1,161 @@
+/* ios26.css — iOS 26 Design Tokens & Glassmorphic Effects */
+
+:root {
+    /* === Colors === */
+    --color-background: rgba(20, 20, 30, 0.7);
+    --color-surface: rgba(30, 30, 40, 0.8);
+    --color-surface-light: rgba(50, 50, 60, 0.9);
+    --color-border: rgba(255, 255, 255, 0.2);
+    --color-text-primary: #ffffff;
+    --color-text-secondary: rgba(255, 255, 255, 0.7);
+    --color-accent: #0a84ff;
+    --color-accent-glow: #409cff;
+    --color-success: #30d158;
+    --color-warning: #ff9f0a;
+    --color-danger: #ff453a;
+    --color-night-vision: #7cfc00;
+    --color-thermal-hot: #ff4500;
+
+    /* === Typography === */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-headline: 600 18px/24px var(--font-family);
+    --font-body: 400 14px/20px var(--font-family);
+    --font-caption: 400 12px/16px var(--font-family);
+
+    /* === Spacing === */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-xxl: 48px;
+
+    /* === Border Radius === */
+    --radius-panel: 12px;
+    --radius-button: 8px;
+    --radius-card: 10px;
+    --radius-circle: 9999px;
+
+    /* === Blur === */
+    --blur-panel: blur(20px);
+    --blur-modal: blur(30px);
+    --blur-heavy: blur(40px);
+
+    /* === Shadows === */
+    --shadow-panel: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    --shadow-modal: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
+    --shadow-button: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+    /* === Animation === */
+    --ease-spring: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+    --duration-fast: 0.15s;
+    --duration-normal: 0.3s;
+    --duration-slow: 0.5s;
+
+    /* === Z-Index === */
+    --z-base: 0;
+    --z-map: 1;
+    --z-ui: 10;
+    --z-panel: 20;
+    --z-modal: 100;
+    --z-tooltip: 200;
+}
+
+/* === Glass Panel Mixin === */
+.glass-panel {
+    background: var(--color-background);
+    backdrop-filter: var(--blur-panel);
+    -webkit-backdrop-filter: var(--blur-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-panel);
+}
+
+.glass-panel-elevated {
+    background: var(--color-surface);
+    backdrop-filter: var(--blur-modal);
+    -webkit-backdrop-filter: var(--blur-modal);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-modal);
+}
+
+/* === Glow Effects === */
+.glow-accent {
+    box-shadow: 0 0 20px rgba(10, 132, 255, 0.3),
+        0 0 60px rgba(10, 132, 255, 0.1),
+        inset 0 0 20px rgba(10, 132, 255, 0.05);
+}
+
+.glow-success {
+    box-shadow: 0 0 15px rgba(48, 209, 88, 0.3);
+}
+
+.glow-danger {
+    box-shadow: 0 0 15px rgba(255, 69, 58, 0.3);
+}
+
+.glow-warning {
+    box-shadow: 0 0 15px rgba(255, 159, 10, 0.3);
+}
+
+/* === Animated Border === */
+@keyframes border-glow {
+
+    0%,
+    100% {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    50% {
+        border-color: rgba(10, 132, 255, 0.4);
+    }
+}
+
+.animated-border {
+    animation: border-glow 3s ease-in-out infinite;
+}
+
+/* === Frosted Overlay === */
+.frosted-overlay {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* === Scroll styling === */
+.ios-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ios-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ios-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+}
+
+.ios-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* === Shader Theme Overrides === */
+.theme-nightvision {
+    --color-accent: #7cfc00;
+    --color-accent-glow: #90ff30;
+    --color-text-primary: #c0ffc0;
+}
+
+.theme-thermal {
+    --color-accent: #ff4500;
+    --color-accent-glow: #ff6a3c;
+    --color-text-primary: #ffd0b0;
+}
+
+.theme-crt {
+    --color-accent: #33ff33;
+    --color-accent-glow: #55ff55;
+    --color-text-primary: #ccffcc;
+}
