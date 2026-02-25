@@ -39,6 +39,24 @@ function normalizeADSBFlight(aircraft: any): MilitaryFlight {
     };
 }
 
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
+// Global channel to prevent reconnect spam and REST fallback warnings
+let militaryChannel: RealtimeChannel | null = null;
+
+function getMilitaryChannel() {
+    if (!militaryChannel) {
+        const supabase = getSupabaseClient();
+        militaryChannel = supabase.channel('flights:military');
+        militaryChannel.subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                console.log('[ADS-B] Subscribed to flights:military realtime channel');
+            }
+        });
+    }
+    return militaryChannel;
+}
+
 export async function pollADSBExchange(): Promise<void> {
     const allMilitary: MilitaryFlight[] = [];
 
@@ -70,14 +88,14 @@ export async function pollADSBExchange(): Promise<void> {
                 new Map(allMilitary.map((f) => [f.icao24, f])).values()
             );
 
-            const supabase = getSupabaseClient();
-            const channel = supabase.channel('flights:military');
-
-            await channel.send({
-                type: 'broadcast',
-                event: 'update',
-                payload: unique,
-            });
+            const channel = getMilitaryChannel();
+            if (channel) {
+                await channel.send({
+                    type: 'broadcast',
+                    event: 'update',
+                    payload: unique,
+                });
+            }
 
             activeFlightsGauge.set({ type: 'military' }, unique.length);
             adsbxPollsTotal.inc({ status: 'success' });

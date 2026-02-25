@@ -1,12 +1,12 @@
 import axios from 'axios';
 import axiosRetry from 'axios-retry';
 import { getSupabaseClient } from '../config/supabase';
-import { env } from '../config/env';
 import { openskyPollsTotal, activeFlightsGauge } from '../routes/metrics';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
-// Configure retry logic
-const client = axios.create({ timeout: 20000 });
-axiosRetry(client, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
+// Configure retry
+const client = axios.create({ timeout: 15000 });
+axiosRetry(client, { retries: 2, retryDelay: axiosRetry.exponentialDelay });
 
 interface FlightState {
     icao24: string;
@@ -22,87 +22,91 @@ interface FlightState {
     last_contact: number;
 }
 
-function normalizeOpenSkyState(state: any[]): FlightState {
+// Global channel to prevent reconnect spam and REST fallback warnings
+let civilianChannel: RealtimeChannel | null = null;
+
+function getCivilianChannel() {
+    if (!civilianChannel) {
+        const supabase = getSupabaseClient();
+        civilianChannel = supabase.channel('flights:civilian');
+        civilianChannel.subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                console.log('[Civilian] Subscribed to flights:civilian realtime channel');
+            }
+        });
+    }
+    return civilianChannel;
+}
+
+const GLOBAL_HUBS = [
+    { lat: 40.71, lon: -74.00, label: 'New York' },
+    { lat: 51.50, lon: -0.12, label: 'London' },
+    { lat: 35.67, lon: 139.65, label: 'Tokyo' },
+    { lat: 48.85, lon: 2.35, label: 'Paris' },
+    { lat: 38.90, lon: -77.03, label: 'Washington DC' }
+];
+
+function normalizeAdsbLol(ac: any): FlightState {
     return {
-        icao24: state[0] || '',
-        callsign: (state[1] || '').trim(),
-        origin_country: state[2] || '',
-        lon: state[5] ?? 0,
-        lat: state[6] ?? 0,
-        alt: state[7] ?? 0, // geometric altitude in meters
-        velocity: state[9] ?? 0, // ground speed m/s
-        heading: state[10] ?? 0, // track angle degrees
-        vertical_rate: state[11] ?? 0,
-        on_ground: state[8] ?? false,
-        last_contact: state[4] ?? 0,
+        icao24: ac.hex || ac.icao || '',
+        callsign: (ac.flight || ac.callsign || '').trim(),
+        origin_country: 'Unknown',
+        lon: ac.lon ?? 0,
+        lat: ac.lat ?? 0,
+        alt: ac.alt_baro ?? ac.alt ?? 0,
+        velocity: ac.gs ?? ac.speed ?? 0,
+        heading: ac.track ?? ac.heading ?? 0,
+        vertical_rate: ac.baro_rate ?? 0,
+        on_ground: false,
+        last_contact: Math.floor(Date.now() / 1000)
     };
 }
 
 export async function pollOpenSky(): Promise<void> {
-    try {
-        const params: Record<string, any> = {};
+    const allFlights: FlightState[] = [];
 
-        // Use authentication if available for higher rate limits
-        const auth =
-            env.OPENSKY_USERNAME && env.OPENSKY_PASSWORD
-                ? { username: env.OPENSKY_USERNAME, password: env.OPENSKY_PASSWORD }
-                : undefined;
+    // Fetch from ADSB.lol for real civilian flights since OpenSky IP bans data centers
+    for (const hub of GLOBAL_HUBS) {
+        try {
+            const response = await client.get(`https://api.adsb.lol/v2/point/${hub.lat}/${hub.lon}/250`, {
+                headers: { Accept: 'application/json' },
+            });
 
-        const response = await client.get('https://opensky-network.org/api/states/all', {
-            params,
-            auth,
-            timeout: 20000,
-        });
+            const aircraft = response.data?.ac || response.data?.aircraft || [];
+            const civilian = aircraft
+                .filter((a: any) => !(a.mil === true || a.military === true || a.dbFlags === 1))
+                .map(normalizeAdsbLol)
+                .filter((f: FlightState) => f.lat !== 0 && f.lon !== 0);
 
-        if (!response.data?.states) {
-            console.log('[OpenSky] No flight states returned');
-            openskyPollsTotal.inc({ status: 'empty' });
-            return;
+            allFlights.push(...civilian);
+        } catch (error: any) {
+            console.error(`[Civilian] Poll failed for ${hub.label}:`, error.message);
         }
+    }
 
-        const normalized: FlightState[] = response.data.states
-            .map(normalizeOpenSkyState)
-            .filter((f: FlightState) => f.lat !== 0 && f.lon !== 0 && !f.on_ground);
+    if (allFlights.length > 0) {
+        try {
+            // Deduplicate by icao24
+            const unique = Array.from(new Map(allFlights.map(f => [f.icao24, f])).values());
 
-        // Broadcast to Supabase Realtime
-        const supabase = getSupabaseClient();
-        const channel = supabase.channel('flights:civilian');
+            const channel = getCivilianChannel();
+            if (channel) {
+                await channel.send({
+                    type: 'broadcast',
+                    event: 'update',
+                    payload: unique,
+                });
+            }
 
-        await channel.send({
-            type: 'broadcast',
-            event: 'update',
-            payload: normalized,
-        });
-
-        activeFlightsGauge.set({ type: 'civilian' }, normalized.length);
-        openskyPollsTotal.inc({ status: 'success' });
-        console.log(`[OpenSky] Broadcast ${normalized.length} civilian flights`);
-    } catch (error: any) {
-        openskyPollsTotal.inc({ status: 'error' });
-        console.error('[OpenSky] Poll failed:', error.message);
-        console.log('[OpenSky] Falling back to mock data due to rate limits...');
-
-        // Mock data fallback to keep the application lively when Render IP is blocked
-        const mockFlights: FlightState[] = Array.from({ length: 150 }).map((_, i) => ({
-            icao24: `mock${i}`,
-            callsign: `MOCK${i}`,
-            origin_country: 'Unknown',
-            lon: -120 + Math.random() * 80, // Broad NA bounds roughly
-            lat: 25 + Math.random() * 30,
-            alt: 8000 + Math.random() * 4000,
-            velocity: 200 + Math.random() * 50,
-            heading: Math.random() * 360,
-            vertical_rate: 0,
-            on_ground: false,
-            last_contact: Math.floor(Date.now() / 1000)
-        }));
-
-        const supabase = getSupabaseClient();
-        const channel = supabase.channel('flights:civilian');
-        await channel.send({
-            type: 'broadcast',
-            event: 'update',
-            payload: mockFlights,
-        });
+            activeFlightsGauge.set({ type: 'civilian' }, unique.length);
+            openskyPollsTotal.inc({ status: 'success' });
+            console.log(`[Civilian] Broadcast ${unique.length} live flights (via adsb.lol fallback)`);
+        } catch (error: any) {
+            openskyPollsTotal.inc({ status: 'error' });
+            console.error('[Civilian] Broadcast failed:', error.message);
+        }
+    } else {
+        openskyPollsTotal.inc({ status: 'empty' });
+        console.log('[Civilian] No civilian flights retrieved this poll.');
     }
 }
