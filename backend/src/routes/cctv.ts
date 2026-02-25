@@ -8,7 +8,7 @@ export async function cctvRoutes(fastify: FastifyInstance) {
 
         const { data, error } = await supabase
             .from('cctv_cameras')
-            .select('id, lat, lon, source_url, heading, pitch, city, label')
+            .select('id, location, source_url, heading, pitch, city, label')
             .order('city');
 
         if (error) {
@@ -25,7 +25,7 @@ export async function cctvRoutes(fastify: FastifyInstance) {
 
         const { data, error } = await supabase
             .from('cctv_cameras')
-            .select('id, lat, lon, source_url, heading, pitch, city, label')
+            .select('id, location, source_url, heading, pitch, city, label')
             .ilike('city', `%${city}%`);
 
         if (error) {

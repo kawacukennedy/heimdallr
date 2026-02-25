@@ -70,15 +70,15 @@ self.onmessage = (e: MessageEvent) => {
         const now = Date.now();
         const positions: Array<{ icao24: string; lat: number; lon: number; alt: number }> = [];
 
-        flightStates.forEach((state, icao24) => {
+        for (const [icao24, state] of Array.from(flightStates.entries())) {
             const dtSeconds = (now - state.timestamp) / 1000;
 
             // Don't extrapolate more than 30 seconds
-            if (dtSeconds > 30) return;
+            if (dtSeconds > 30) continue;
 
             const pos = extrapolate(state, dtSeconds);
             positions.push({ icao24, ...pos });
-        });
+        }
 
         self.postMessage({ type: 'positions', positions });
     }

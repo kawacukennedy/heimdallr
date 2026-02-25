@@ -44,15 +44,12 @@ export default function CesiumViewer({ onReady, children }: CesiumViewerProps) {
                     powerPreference: 'high-performance' as WebGLPowerPreference,
                 },
             },
-            terrainProvider: await Cesium.createWorldTerrainAsync({
-                requestWaterMask: true,
-                requestVertexNormals: true
-            }),
         });
 
         // Scene configuration
         viewer.scene.backgroundColor = Cesium.Color.BLACK;
         viewer.scene.globe.enableLighting = true;
+        viewer.scene.globe.depthTestAgainstTerrain = true; // Required for true 3D topography and building intersection
         viewer.scene.highDynamicRange = true;
         viewer.scene.postProcessStages.fxaa.enabled = true;
 
