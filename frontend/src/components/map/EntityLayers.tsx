@@ -170,7 +170,7 @@ export default function EntityLayers() {
                 const res = await fetch(`/api/satellites/tle`);
                 if (!res.ok) return;
                 const data = await res.json();
-                worker.postMessage({ type: 'init', tles: data.tles || data });
+                worker.postMessage({ type: 'init', tles: data.tle_data || data.tles || data });
             } catch (err) {
                 console.warn('Failed to fetch TLE data:', err);
             }

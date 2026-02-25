@@ -13,11 +13,11 @@ export async function satelliteRoutes(fastify: FastifyInstance) {
             .limit(1)
             .single();
 
-        if (error) {
+        if (error || !data || !data.tle_data) {
             return reply.status(404).send({ error: 'No TLE data available' });
         }
 
-        return reply.send(data);
+        return reply.send(data.tle_data);
     });
 
     // GET /api/satellites/count

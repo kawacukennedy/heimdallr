@@ -72,9 +72,8 @@ export default function CesiumViewer({ onReady, children }: CesiumViewerProps) {
             }
         ];
 
-        // Performance
-        viewer.scene.requestRenderMode = true;
-        viewer.scene.maximumRenderTimeChange = 0.5;
+        // Performance overrides
+        viewer.resolutionScale = 0.8; // Minor downsample for huge performance boost on Retina/4K displays
 
         // Load Google Photorealistic 3D Tiles (if API key available)
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
