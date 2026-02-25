@@ -4,8 +4,8 @@ import postgres from 'postgres';
 import { env } from '../config/env';
 
 export async function runMigrationsAndSeed() {
-    if (!env.DATABASE_URL || env.DATABASE_URL.includes('your-project')) {
-        console.warn('⚠️ No valid DATABASE_URL provided. Skipping database migrations and seeding.');
+    if (!env.DATABASE_URL || env.DATABASE_URL.includes('your-project') || (env.NODE_ENV === 'production' && env.DATABASE_URL.includes('localhost'))) {
+        console.warn('⚠️ No valid production DATABASE_URL provided. Skipping database migrations and seeding until explicitly configured.');
         return;
     }
 
