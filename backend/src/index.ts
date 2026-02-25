@@ -13,6 +13,7 @@ import { cctvRoutes } from './routes/cctv';
 import { analyticsRoutes } from './routes/analytics';
 import { startScheduler } from './jobs/scheduler';
 import { httpRequestsTotal, httpRequestDuration } from './routes/metrics';
+import { runMigrationsAndSeed } from './db/seed';
 
 async function main() {
     const fastify = Fastify({
@@ -84,18 +85,30 @@ async function main() {
     });
 
     // --- Start ---
-    try {
-        const port = typeof env.PORT === 'number' ? env.PORT : parseInt(env.PORT as any, 10);
-        await fastify.listen({ port, host: '0.0.0.0' });
+    await runMigrationsAndSeed();
 
-        // Start cron jobs after server is listening
-        startScheduler();
+    if (!process.env.VERCEL) {
+        try {
+            const port = typeof env.PORT === 'number' ? env.PORT : parseInt(env.PORT as any, 10);
+            await fastify.listen({ port, host: '0.0.0.0' });
 
-        fastify.log.info(`🚀 Heimdallr Backend running on port ${port}`);
-    } catch (err) {
-        fastify.log.error(err);
-        process.exit(1);
+            // Start cron jobs after server is listening
+            startScheduler();
+
+            fastify.log.info(`🚀 Heimdallr Backend running on port ${port}`);
+        } catch (err) {
+            fastify.log.error(err);
+            process.exit(1);
+        }
     }
+
+    return fastify;
 }
 
-main();
+const app = main();
+
+export default async function (req: any, res: any) {
+    const fastify = await app;
+    await fastify.ready();
+    fastify.server.emit('request', req, res);
+}

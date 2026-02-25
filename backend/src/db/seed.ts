@@ -1,0 +1,58 @@
+import fs from 'fs';
+import path from 'path';
+import postgres from 'postgres';
+import { env } from '../config/env';
+
+export async function runMigrationsAndSeed() {
+    if (!env.DATABASE_URL || env.DATABASE_URL.includes('your-project')) {
+        console.warn('⚠️ No valid DATABASE_URL provided. Skipping database migrations and seeding.');
+        return;
+    }
+
+    try {
+        const isLocalHost = env.DATABASE_URL.includes('localhost') || env.DATABASE_URL.includes('127.0.0.1');
+        const sql = postgres(env.DATABASE_URL, { ssl: isLocalHost ? false : 'require' });
+
+        console.log('📦 Connected to database. Starting migrations and seeding...');
+
+        // Ensure migrations tracking table exists
+        await sql`
+            CREATE TABLE IF NOT EXISTS _migrations (
+                id SERIAL PRIMARY KEY,
+                filename TEXT UNIQUE NOT NULL,
+                applied_at TIMESTAMPTZ DEFAULT NOW()
+            );
+        `;
+
+        const migrationsDir = path.resolve(__dirname, '../../../database/migrations');
+        if (!fs.existsSync(migrationsDir)) {
+            console.warn(`⚠️ Migrations directory not found at ${migrationsDir}`);
+            await sql.end();
+            return;
+        }
+
+        const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
+
+        for (const file of files) {
+            const [record] = await sql`SELECT filename FROM _migrations WHERE filename = ${file}`;
+            if (record) {
+                console.log(`⏩ Skipping ${file} (already applied)`);
+                continue;
+            }
+
+            console.log(`⏳ Applying ${file}...`);
+            const filePath = path.join(migrationsDir, file);
+            const content = fs.readFileSync(filePath, 'utf8');
+
+            // Note: sql.unsafe allows execution of raw SQL strings
+            await sql.unsafe(content);
+            await sql`INSERT INTO _migrations (filename) VALUES (${file})`;
+            console.log(`✅ Successfully applied ${file}`);
+        }
+
+        await sql.end();
+        console.log('🎉 Database migrations and seeding completed.');
+    } catch (error) {
+        console.error('❌ Error applying database migrations:', error);
+    }
+}

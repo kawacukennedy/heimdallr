@@ -10,6 +10,7 @@ const envSchema = z.object({
     // Supabase
     SUPABASE_URL: z.string().url().default('https://your-project.supabase.co'),
     SUPABASE_SERVICE_ROLE_KEY: z.string().default('your-service-role-key'),
+    DATABASE_URL: z.string().url().default('postgresql://postgres:password@localhost:5432/postgres'),
 
     // OpenSky Network
     OPENSKY_USERNAME: z.string().default(''),
