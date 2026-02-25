@@ -5,7 +5,7 @@ import { env } from '../config/env';
 import { openskyPollsTotal, activeFlightsGauge } from '../routes/metrics';
 
 // Configure retry logic
-const client = axios.create({ timeout: 10000 });
+const client = axios.create({ timeout: 20000 });
 axiosRetry(client, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 
 interface FlightState {
@@ -51,7 +51,7 @@ export async function pollOpenSky(): Promise<void> {
         const response = await client.get('https://opensky-network.org/api/states/all', {
             params,
             auth,
-            timeout: 10000,
+            timeout: 20000,
         });
 
         if (!response.data?.states) {

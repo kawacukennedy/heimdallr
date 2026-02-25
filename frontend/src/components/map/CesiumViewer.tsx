@@ -49,7 +49,6 @@ export default function CesiumViewer({ onReady, children }: CesiumViewerProps) {
         // Scene configuration
         viewer.scene.backgroundColor = Cesium.Color.BLACK;
         viewer.scene.globe.enableLighting = true;
-        viewer.scene.globe.depthTestAgainstTerrain = true;
         viewer.scene.highDynamicRange = true;
         viewer.scene.postProcessStages.fxaa.enabled = true;
 
