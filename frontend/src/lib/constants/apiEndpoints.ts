@@ -1,6 +1,6 @@
 // API endpoint configuration
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || (process.env.NODE_ENV === 'production' ? 'https://heimdallr-backend.onrender.com' : 'http://localhost:3001');
 
 export const API_ENDPOINTS = {
     // Backend endpoints

@@ -16,3 +16,5 @@ services:
         sync: false
       - key: CELESTRAK_URL
         value: https://celestrak.com/NORAD/elements/gp.php?GROUP=active&FORMAT=tle
+      - key: FRONTEND_URL
+        value: https://heimdallrproject.vercel.app

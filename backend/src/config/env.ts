@@ -28,8 +28,7 @@ const envSchema = z.object({
     REDIS_URL: z.string().optional(),
     SENTRY_DSN: z.string().optional(),
 
-    // CORS
-    FRONTEND_URL: z.string().default('http://localhost:3000'),
+    FRONTEND_URL: z.string().default(process.env.NODE_ENV === 'production' ? 'https://heimdallrproject.vercel.app' : 'http://localhost:3000'),
 });
 
 export type Env = z.infer<typeof envSchema>;
