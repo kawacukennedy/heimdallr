@@ -7,8 +7,8 @@ export default function Document() {
                 <meta charSet="utf-8" />
                 <meta name="description" content="Heimdallr – Real-time Geospatial Intelligence Dashboard with 3D photorealistic tiles, live aviation telemetry, satellite tracking, and CCTV feeds." />
                 <meta name="theme-color" content="#000000" />
-                <link rel="icon" href="/assets/icons/favicon.ico" />
-                <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png" />
+                <link rel="icon" type="image/svg+xml" href="/assets/icons/logo.svg" />
+                <link rel="apple-touch-icon" href="/assets/icons/logo.svg" />
 
                 {/* Cesium CSS */}
                 <link rel="stylesheet" href="/assets/cesium/Widgets/widgets.css" />
