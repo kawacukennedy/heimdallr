@@ -43,18 +43,19 @@ export async function runMigrationsAndSeed() {
 
         const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
 
-        console.log(`⏳ Applying ${file}...`);
-        const filePath = path.join(migrationsDir, file);
+        for (const file of files) {
+            console.log(`⏳ Applying ${file}...`);
+            const filePath = path.join(migrationsDir, file);
 
-        // Note: sql.file automatically handles postgres multi-line statements
-        await sql.file(filePath);
-        await sql`INSERT INTO _migrations (filename) VALUES (${file}) ON CONFLICT DO NOTHING`;
-        console.log(`✅ Successfully applied ${file}`);
-    }
+            // Note: sql.file automatically handles postgres multi-line statements
+            await sql.file(filePath);
+            await sql`INSERT INTO _migrations (filename) VALUES (${file}) ON CONFLICT DO NOTHING`;
+            console.log(`✅ Successfully applied ${file}`);
+        }
 
         await sql.end();
-    console.log('🎉 Database migrations and seeding completed.');
-} catch (error) {
-    console.error('❌ Error applying database migrations:', error);
-}
+        console.log('🎉 Database migrations and seeding completed.');
+    } catch (error) {
+        console.error('❌ Error applying database migrations:', error);
+    }
 }
