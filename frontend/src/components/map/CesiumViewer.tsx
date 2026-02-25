@@ -52,6 +52,25 @@ export default function CesiumViewer({ onReady, children }: CesiumViewerProps) {
         viewer.scene.highDynamicRange = true;
         viewer.scene.postProcessStages.fxaa.enabled = true;
 
+        // Camera & Control Polish for 3D navigation
+        viewer.scene.screenSpaceCameraController.enableTilt = true;
+        viewer.scene.screenSpaceCameraController.enableZoom = true;
+        viewer.scene.screenSpaceCameraController.minimumZoomDistance = 10;
+        viewer.scene.screenSpaceCameraController.maximumZoomDistance = 50000000;
+        // Allows touchpad users to tilt by dragging with two fingers or ctrl+drag
+        viewer.scene.screenSpaceCameraController.tiltEventTypes = [
+            Cesium.CameraEventType.MIDDLE_DRAG,
+            Cesium.CameraEventType.PINCH,
+            {
+                eventType: Cesium.CameraEventType.LEFT_DRAG,
+                modifier: Cesium.KeyboardEventModifier.CTRL
+            },
+            {
+                eventType: Cesium.CameraEventType.RIGHT_DRAG,
+                modifier: Cesium.KeyboardEventModifier.CTRL
+            }
+        ];
+
         // Performance
         viewer.scene.requestRenderMode = true;
         viewer.scene.maximumRenderTimeChange = 0.5;
