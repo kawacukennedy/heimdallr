@@ -167,8 +167,7 @@ export default function EntityLayers() {
         // Fetch TLEs from backend and initialize worker
         const initSatellites = async () => {
             try {
-                const backendUrl = process.env.NEXT_PUBLIC_API_URL || '';
-                const res = await fetch(`${backendUrl}/api/satellites/tle`);
+                const res = await fetch(`/api/satellites/tle`);
                 if (!res.ok) return;
                 const data = await res.json();
                 worker.postMessage({ type: 'init', tles: data.tles || data });
@@ -270,10 +269,10 @@ export default function EntityLayers() {
         // Load initial CCTV cameras from database
         const loadInitialCameras = async () => {
             try {
-                const { data, error } = await supabase
-                    .from('cctv_cameras')
-                    .select('*');
-                if (error || !data) return;
+                const res = await fetch('/api/cctv');
+                if (!res.ok) return;
+
+                const data = await res.json();
 
                 data.forEach((cam: any) => {
                     const lon = cam.location?.coordinates?.[0] ?? cam.lon ?? 0;
