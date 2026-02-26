@@ -12,15 +12,17 @@ export function middleware(request: NextRequest) {
         'Permissions-Policy',
         'camera=(), microphone=(), geolocation=(self)'
     );
+    
+    // CSP - allow fonts from Google
     response.headers.set(
         'Content-Security-Policy',
         [
             "default-src 'self'",
             "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-            "font-src 'self' https://fonts.gstatic.com data:",
+            "font-src 'self' data: https://fonts.gstatic.com",
             "img-src 'self' data: blob: https://*.googleapis.com https://*.openstreetmap.org https://*.supabase.co https://*.cesium.com https://*.virtualearth.net https://*.gstatic.com",
-            "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://opensky-network.org https://adsbexchange.com https://adsb.lol https://*.cesium.com https://nominatim.openstreetmap.org https://tile.googleapis.com https://*.virtualearth.net https://fonts.googleapis.com https://fonts.gstatic.com",
+            "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://opensky-network.org https://adsbexchange.com https://adsb.lol https://*.cesium.com https://nominatim.openstreetmap.org https://tile.googleapis.com https://*.virtualearth.net https://fonts.googleapis.com https://fonts.gstatic.com https://overpass-api.de",
             "worker-src 'self' blob:",
             "frame-src 'none'",
         ].join('; ')

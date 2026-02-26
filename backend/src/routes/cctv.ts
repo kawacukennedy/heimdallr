@@ -1,8 +1,19 @@
 import { FastifyInstance } from 'fastify';
+import axios from 'axios';
 import { getSupabaseClient } from '../config/supabase';
 
+interface TrafficCamera {
+    Id: number;
+    Description: string;
+    Latitude: number;
+    Longitude: number;
+    ImageURL: string;
+    Roadway: string;
+    Direction: string;
+}
+
 export async function cctvRoutes(fastify: FastifyInstance) {
-    // GET /api/cctv — all cameras
+    // GET /api/cctv — all cameras from database + live feeds
     fastify.get('/api/cctv', async (_request, reply) => {
         const supabase = getSupabaseClient();
 
@@ -15,7 +26,67 @@ export async function cctvRoutes(fastify: FastifyInstance) {
             return reply.status(500).send({ error: error.message });
         }
 
-        return reply.send(data);
+        return reply.send(data || []);
+    });
+
+    // GET /api/cctv/live — fetch live traffic cameras from public APIs
+    fastify.get('/api/cctv/live', async (_request, reply) => {
+        const cameras: any[] = [];
+
+        // Fetch from Ontario 511 API (free, public)
+        try {
+            const ontarioRes = await axios.get('https://511on.ca/api/v2/get/cameras?format=json', {
+                timeout: 10000,
+            });
+            
+            const ontarioCameras: TrafficCamera[] = ontarioRes.data || [];
+            
+            ontarioCameras.forEach((cam: TrafficCamera) => {
+                if (cam.Latitude && cam.Longitude) {
+                    cameras.push({
+                        id: `ontario-${cam.Id}`,
+                        lat: cam.Latitude,
+                        lon: cam.Longitude,
+                        source_url: cam.ImageURL,
+                        heading: cam.Direction === 'E' ? 90 : cam.Direction === 'W' ? 270 : cam.Direction === 'N' ? 0 : 180,
+                        pitch: -15,
+                        city: 'Ontario',
+                        label: cam.Description || cam.Roadway,
+                    });
+                }
+            });
+        } catch (e) {
+            console.error('Ontario 511 fetch failed:', e);
+        }
+
+        // Fetch from New York 511
+        try {
+            const nyRes = await axios.get('https://511ny.org/api/get/cameras', {
+                timeout: 10000,
+                headers: { 'Authorization': 'anonymous' }
+            });
+            
+            const nyCameras = nyRes.data?.cameras || [];
+            
+            nyCameras.forEach((cam: any) => {
+                if (cam.lat && cam.lng) {
+                    cameras.push({
+                        id: `ny-${cam.id}`,
+                        lat: cam.lat,
+                        lon: cam.lng,
+                        source_url: cam.url,
+                        heading: 0,
+                        pitch: -15,
+                        city: 'New York',
+                        label: cam.name || cam.location,
+                    });
+                }
+            });
+        } catch (e) {
+            console.error('NY 511 fetch failed:', e);
+        }
+
+        return reply.send(cameras);
     });
 
     // GET /api/cctv/:city — cameras by city
@@ -32,7 +103,7 @@ export async function cctvRoutes(fastify: FastifyInstance) {
             return reply.status(500).send({ error: error.message });
         }
 
-        return reply.send(data);
+        return reply.send(data || []);
     });
 
     // GET /api/cctv/nearby — cameras within radius
@@ -49,16 +120,15 @@ export async function cctvRoutes(fastify: FastifyInstance) {
             });
 
             if (error) {
-                // Fallback to simple query if RPC not available
                 const { data: fallback, error: fallbackErr } = await supabase
                     .from('cctv_cameras')
                     .select('*');
 
                 if (fallbackErr) return reply.status(500).send({ error: fallbackErr.message });
-                return reply.send(fallback);
+                return reply.send(fallback || []);
             }
 
-            return reply.send(data);
+            return reply.send(data || []);
         }
     );
 }
