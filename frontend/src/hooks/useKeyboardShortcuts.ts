@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useUIStore } from '@/store/uiStore';
+import { useCamera } from '@/hooks/useCamera';
 import type { LayerKey, ShaderPreset } from '@/types';
 
 export function useKeyboardShortcuts() {
@@ -15,6 +16,7 @@ export function useKeyboardShortcuts() {
     const clearSelection = useUIStore((s) => s.clearSelection);
     const closeAllModals = useUIStore((s) => s.closeAllModals);
     const selectedEntityId = useUIStore((s) => s.selectedEntityId);
+    const { flyToEntity } = useCamera();
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
@@ -46,6 +48,13 @@ export function useKeyboardShortcuts() {
                 case 'p': toggleBottomPanel(); break;
                 case 'r': toggleRightPanel(); break;
 
+                // Navigation
+                case 'f':
+                    if (selectedEntityId) {
+                        flyToEntity(selectedEntityId);
+                    }
+                    break;
+
                 // Search
                 case '/':
                     e.preventDefault();
@@ -68,6 +77,6 @@ export function useKeyboardShortcuts() {
     }, [
         toggleLayer, setShader, toggleSidebar, toggleBottomPanel,
         toggleRightPanel, setSearchOpen, setHelpOpen, clearSelection,
-        closeAllModals, selectedEntityId,
+        closeAllModals, selectedEntityId, flyToEntity,
     ]);
 }

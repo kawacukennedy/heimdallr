@@ -4,7 +4,7 @@ import { CesiumProvider } from '@/providers/CesiumProvider';
 import { RealtimeProvider } from '@/providers/RealtimeProvider';
 import { ToastProvider } from '@/providers/ToastProvider';
 import ToastContainer from '@/components/ui/Toast';
-import React from 'react';
+import React, { useEffect } from 'react';
 
 // Error boundary
 class ErrorBoundary extends React.Component<
@@ -46,6 +46,14 @@ class ErrorBoundary extends React.Component<
 }
 
 export default function App({ Component, pageProps }: AppProps) {
+    useEffect(() => {
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch((err) => {
+                console.warn('Service worker registration failed:', err);
+            });
+        }
+    }, []);
+
     return (
         <ErrorBoundary>
             <CesiumProvider>

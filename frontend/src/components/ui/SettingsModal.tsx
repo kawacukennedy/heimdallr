@@ -5,8 +5,9 @@ import Modal from './Modal';
 import { useUIStore } from '@/store/uiStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { KEYBOARD_SHORTCUTS } from '@/lib/constants/keyboardShortcuts';
+import { useSettings } from '@/hooks/useSettings';
 
-const TABS = ['General', 'Display', 'Data', 'Shortcuts', 'About'] as const;
+const TABS = ['General', 'Display', 'Data', 'Shortcuts', 'About', 'Account'] as const;
 type SettingsTab = (typeof TABS)[number];
 
 export default function SettingsModal() {
@@ -178,6 +179,8 @@ export default function SettingsModal() {
                         </div>
                     </div>
                 )}
+
+                {activeTab === 'Account' && <AccountTab />}
             </div>
         </Modal>
     );
@@ -205,5 +208,137 @@ function Checkbox({ checked, onChange }: { checked: boolean; onChange: (v: boole
                     }`}
             />
         </button>
+    );
+}
+
+function AccountTab() {
+    const { user, loading, signIn, signUp, signOut } = useSettings();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [displayName, setDisplayName] = useState('');
+    const [isRegister, setIsRegister] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+        try {
+            if (isRegister) {
+                await signUp(email, password, displayName);
+                setSuccess('Registration successful! Please check your email for verification.');
+            } else {
+                await signIn(email, password);
+            }
+            setEmail('');
+            setPassword('');
+            setDisplayName('');
+        } catch (err: any) {
+            setError(err.message);
+        }
+    };
+
+    const handleSignOut = async () => {
+        try {
+            await signOut();
+        } catch (err: any) {
+            setError(err.message);
+        }
+    };
+
+    if (loading) {
+        return <div className="text-white/50 text-sm">Loading...</div>;
+    }
+
+    if (user) {
+        return (
+            <div className="space-y-4">
+                <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center">
+                            <span className="text-lg font-bold text-accent">
+                                {user.user_metadata?.display_name?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
+                            </span>
+                        </div>
+                        <div>
+                            <div className="text-white font-medium">
+                                {user.user_metadata?.display_name || 'User'}
+                            </div>
+                            <div className="text-xs text-white/50">{user.email}</div>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleSignOut}
+                        className="w-full py-2 px-4 bg-danger/20 border border-danger/30 text-danger rounded-lg hover:bg-danger/30 transition-colors text-sm"
+                    >
+                        Sign Out
+                    </button>
+                </div>
+                <p className="text-xs text-white/40">
+                    Sign in to sync bookmarks and settings across devices.
+                </p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-4">
+            <p className="text-sm text-white/70">
+                Sign in to sync bookmarks and settings across devices.
+            </p>
+            <form onSubmit={handleSubmit} className="space-y-3">
+                {isRegister && (
+                    <div>
+                        <label className="block text-xs text-white/50 mb-1">Display Name</label>
+                        <input
+                            type="text"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            className="glass-input w-full text-sm"
+                            placeholder="Your name"
+                        />
+                    </div>
+                )}
+                <div>
+                    <label className="block text-xs text-white/50 mb-1">Email</label>
+                    <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="glass-input w-full text-sm"
+                        placeholder="user@example.com"
+                        required
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs text-white/50 mb-1">Password</label>
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="glass-input w-full text-sm"
+                        placeholder="••••••••"
+                        required
+                        minLength={6}
+                    />
+                </div>
+                {error && <div className="text-xs text-danger">{error}</div>}
+                {success && <div className="text-xs text-success">{success}</div>}
+                <button
+                    type="submit"
+                    className="w-full py-2 px-4 bg-accent/20 border border-accent/30 text-accent rounded-lg hover:bg-accent/30 transition-colors text-sm font-medium"
+                >
+                    {isRegister ? 'Create Account' : 'Sign In'}
+                </button>
+            </form>
+            <button
+                type="button"
+                onClick={() => { setIsRegister(!isRegister); setError(''); setSuccess(''); }}
+                className="text-xs text-white/50 hover:text-white/70 transition-colors"
+            >
+                {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Register"}
+            </button>
+        </div>
     );
 }

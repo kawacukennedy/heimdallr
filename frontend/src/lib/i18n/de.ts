@@ -1,5 +1,8 @@
 // German translations
-const de = {
+
+import { Translation } from './en';
+
+const de: Translation = {
     app: {
         name: 'Heimdallr',
         tagline: 'Echtzeit-Geospatial-Intelligence',
@@ -56,7 +59,6 @@ const de = {
         hoursAgo: 'vor {n}h',
         daysAgo: 'vor {n}T',
     },
-} as const;
+};
 
-export type TranslationKeys = typeof de;
 export default de;

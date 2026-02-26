@@ -1,5 +1,8 @@
 // French translations
-const fr = {
+
+import { Translation } from './en';
+
+const fr: Translation = {
     app: {
         name: 'Heimdallr',
         tagline: 'Renseignement Géospatial en Temps Réel',
@@ -56,7 +59,6 @@ const fr = {
         hoursAgo: 'il y a {n}h',
         daysAgo: 'il y a {n}j',
     },
-} as const;
+};
 
-export type TranslationKeys = typeof fr;
 export default fr;

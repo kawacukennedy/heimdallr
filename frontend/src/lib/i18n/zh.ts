@@ -1,5 +1,8 @@
 // Simplified Chinese translations
-const zh = {
+
+import { Translation } from './en';
+
+const zh: Translation = {
     app: {
         name: 'Heimdallr',
         tagline: '实时地理空间情报',
@@ -56,7 +59,6 @@ const zh = {
         hoursAgo: '{n}小时前',
         daysAgo: '{n}天前',
     },
-} as const;
+};
 
-export type TranslationKeys = typeof zh;
 export default zh;
