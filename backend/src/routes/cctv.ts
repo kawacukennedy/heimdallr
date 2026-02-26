@@ -36,7 +36,7 @@ export async function cctvRoutes(fastify: FastifyInstance) {
         // Fetch from Ontario 511 API (free, public)
         try {
             const ontarioRes = await axios.get('https://511on.ca/api/v2/get/cameras?format=json', {
-                timeout: 10000,
+                timeout: 15000,
             });
             
             const ontarioCameras: TrafficCamera[] = ontarioRes.data || [];
@@ -59,31 +59,31 @@ export async function cctvRoutes(fastify: FastifyInstance) {
             console.error('Ontario 511 fetch failed:', e);
         }
 
-        // Fetch from New York 511
+        // Try Texas DOT cameras as backup
         try {
-            const nyRes = await axios.get('https://511ny.org/api/get/cameras', {
-                timeout: 10000,
-                headers: { 'Authorization': 'anonymous' }
+            const texasRes = await axios.get('https://public-api.tntraffic.com/trafficCameras/v1/texas', {
+                timeout: 15000,
+                headers: { 'Accept': 'application/json' }
             });
             
-            const nyCameras = nyRes.data?.cameras || [];
+            const texasCameras = texasRes.data?.cameras || [];
             
-            nyCameras.forEach((cam: any) => {
+            texasCameras.forEach((cam: any) => {
                 if (cam.lat && cam.lng) {
                     cameras.push({
-                        id: `ny-${cam.id}`,
+                        id: `texas-${cam.id}`,
                         lat: cam.lat,
                         lon: cam.lng,
-                        source_url: cam.url,
+                        source_url: cam.imageUrl,
                         heading: 0,
                         pitch: -15,
-                        city: 'New York',
+                        city: 'Texas',
                         label: cam.name || cam.location,
                     });
                 }
             });
         } catch (e) {
-            console.error('NY 511 fetch failed:', e);
+            // Texas API failed, that's ok
         }
 
         return reply.send(cameras);

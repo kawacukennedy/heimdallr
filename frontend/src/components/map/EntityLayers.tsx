@@ -14,6 +14,7 @@ export default function EntityLayers() {
     const cesiumRef = useRef<typeof import('cesium') | null>(null);
     const sgp4WorkerRef = useRef<Worker | null>(null);
     const animFrameRef = useRef<number>(0);
+    const deadReckoningWorkerRef = useRef<Worker | null>(null);
 
     // Load Cesium module
     useEffect(() => {
@@ -25,6 +26,7 @@ export default function EntityLayers() {
     // ==========================
     // Civilian Flights Layer
     // ==========================
+
     const updateCivilianFlights = useCallback(
         (payload: FlightData[]) => {
             const Cesium = cesiumRef.current;
@@ -62,13 +64,19 @@ export default function EntityLayers() {
                     });
                     store.set(flight.icao24, entity);
                 } else {
-                    entity.position = Cesium.Cartesian3.fromDegrees(
+                    // Update existing entity position
+                    const newPos = Cesium.Cartesian3.fromDegrees(
                         flight.lon,
                         flight.lat,
                         flight.alt
-                    ) as any;
+                    );
+                    entity.position = newPos as any;
                     if (entity.properties) {
                         (entity as any).properties = flight;
+                    }
+                    // Debug: log position update for first few flights
+                    if (payload.length <= 10 || payload.indexOf(flight) < 3) {
+                        console.log(`[EntityLayers] Updated flight ${flight.icao24}: (${flight.lon.toFixed(2)}, ${flight.lat.toFixed(2)}, ${flight.alt})`);
                     }
                 }
             });
@@ -147,83 +155,74 @@ export default function EntityLayers() {
     );
 
     // ==========================
-    // Flight Dead Reckoning Worker
+    // Flight Dead Reckoning Worker - Single unified worker
     // ==========================
+    const cesiumReadyRef = useRef(false);
+    const workerInitializedRef = useRef(false);
+
+    // Initialize worker once when Cesium loads
     useEffect(() => {
+        if (workerInitializedRef.current) return;
+        
         const Cesium = cesiumRef.current;
         const viewer = viewerRef.current;
-        if (!Cesium || !viewer) return;
-
-        let worker: Worker;
-        try {
-            worker = new Worker(
-                new URL('../../workers/deadReckoning.worker.ts', import.meta.url),
-                { type: 'module' }
-            );
-        } catch (e) {
-            console.warn('Dead reckoning worker not available', e);
+        
+        if (!Cesium || !viewer) {
+            // Cesium not ready yet
             return;
         }
 
-        // Handle interpolated positions
-        worker.onmessage = (e) => {
-            if (e.data.type === 'positions') {
-                const storeCiv = entityStoreRef.current.civilianFlights;
-                const storeMil = entityStoreRef.current.militaryFlights;
+        cesiumReadyRef.current = true;
+        workerInitializedRef.current = true;
 
-                e.data.positions.forEach((pos: any) => {
-                    // It could be civilian or military, we check both stores
-                    const entity = storeCiv.get(pos.icao24) || storeMil.get(pos.icao24);
-                    if (entity) {
-                        entity.position = Cesium.Cartesian3.fromDegrees(
-                            pos.lon, pos.lat, pos.alt
-                        ) as any;
-                    }
-                });
-                viewer.scene.requestRender();
-            }
-        };
-
-        const interpolate = () => {
-            if (layers.civilian || layers.military) {
-                worker.postMessage({ type: 'interpolate' });
-            }
-            animFrameRef.current = requestAnimationFrame(interpolate);
-        };
-
-        // Start interpolation loop
-        animFrameRef.current = requestAnimationFrame(interpolate);
-
-        return () => {
-            cancelAnimationFrame(animFrameRef.current);
-            worker.terminate();
-        };
-    }, [viewerRef, entityStoreRef, layers.civilian, layers.military]);
-
-    // Send flight updates to the worker when they arrive
-    const pushToWorker = useCallback(
-        (payload: FlightData[] | MilitaryFlightData[]) => {
-            if (payload && payload.length > 0) {
-                const workerUrl = new URL('../../workers/deadReckoning.worker.ts', import.meta.url);
-                // We can't access the worker instance directly from another hook easily without a ref.
-                // So we update the worker data when the payload arrives.
-            }
-        }, []
-    );
-
-    // Patch the original update handlers to also send to worker via a global or ref
-    const deadReckoningWorkerRef = useRef<Worker | null>(null);
-    useEffect(() => {
+        // Create single worker
         try {
-            deadReckoningWorkerRef.current = new Worker(
+            const worker = new Worker(
                 new URL('../../workers/deadReckoning.worker.ts', import.meta.url),
                 { type: 'module' }
             );
-        } catch { }
+            deadReckoningWorkerRef.current = worker;
+
+            // Handle interpolated positions from worker
+            worker.onmessage = (e) => {
+                if (e.data.type === 'positions') {
+                    const storeCiv = entityStoreRef.current.civilianFlights;
+                    const storeMil = entityStoreRef.current.militaryFlights;
+
+                    e.data.positions.forEach((pos: any) => {
+                        const entity = storeCiv.get(pos.icao24) || storeMil.get(pos.icao24);
+                        if (entity) {
+                            entity.position = Cesium.Cartesian3.fromDegrees(
+                                pos.lon, pos.lat, pos.alt
+                            ) as any;
+                        }
+                    });
+                    viewer.scene.requestRender();
+                }
+            };
+
+            // Start interpolation loop
+            const interpolate = () => {
+                const currentLayers = useUIStore.getState().layers;
+                if (currentLayers.civilian || currentLayers.military) {
+                    worker.postMessage({ type: 'interpolate' });
+                }
+                animFrameRef.current = requestAnimationFrame(interpolate);
+            };
+            animFrameRef.current = requestAnimationFrame(interpolate);
+
+            console.log('[EntityLayers] Dead reckoning worker initialized');
+        } catch (e) {
+            console.warn('Dead reckoning worker not available', e);
+        }
+
         return () => {
+            cancelAnimationFrame(animFrameRef.current);
             deadReckoningWorkerRef.current?.terminate();
+            deadReckoningWorkerRef.current = null;
+            workerInitializedRef.current = false;
         };
-    }, []);
+    }, [viewerRef, entityStoreRef]);
 
     // ==========================
     // Satellite Layer (SGP4 Worker)
@@ -510,6 +509,11 @@ export default function EntityLayers() {
     // ==========================
     // Subscribe to Realtime channels
     // ==========================
+    const civilianCallbackRef = useRef(updateCivilianFlights);
+    const militaryCallbackRef = useRef(updateMilitaryFlights);
+    civilianCallbackRef.current = updateCivilianFlights;
+    militaryCallbackRef.current = updateMilitaryFlights;
+
     useEffect(() => {
         const supabase = getSupabaseClient();
 
@@ -519,7 +523,7 @@ export default function EntityLayers() {
             .channel(CHANNELS.CIVILIAN_FLIGHTS)
             .on('broadcast', { event: 'update' }, (msg: any) => {
                 console.log('[EntityLayers] Received civilian flights:', msg.payload?.length);
-                updateCivilianFlights(msg.payload);
+                civilianCallbackRef.current(msg.payload);
             })
             .subscribe((status) => {
                 console.log('[EntityLayers] Civilian channel status:', status);
@@ -529,7 +533,7 @@ export default function EntityLayers() {
             .channel(CHANNELS.MILITARY_FLIGHTS)
             .on('broadcast', { event: 'update' }, (msg: any) => {
                 console.log('[EntityLayers] Received military flights:', msg.payload?.length);
-                updateMilitaryFlights(msg.payload);
+                militaryCallbackRef.current(msg.payload);
             })
             .subscribe((status) => {
                 console.log('[EntityLayers] Military channel status:', status);
@@ -539,7 +543,7 @@ export default function EntityLayers() {
             supabase.removeChannel(civilianChannel);
             supabase.removeChannel(militaryChannel);
         };
-    }, [updateCivilianFlights, updateMilitaryFlights]);
+    }, []);
 
     // ==========================
     // Layer visibility sync
