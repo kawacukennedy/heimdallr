@@ -15,12 +15,27 @@ export default function EntityLayers() {
     const sgp4WorkerRef = useRef<Worker | null>(null);
     const animFrameRef = useRef<number>(0);
     const deadReckoningWorkerRef = useRef<Worker | null>(null);
+    const cesiumReadyRef = useRef(false);
 
-    // Load Cesium module
+    // Load Cesium module and wait for viewer
     useEffect(() => {
-        import('cesium').then((mod) => {
-            cesiumRef.current = mod;
-        });
+        const init = async () => {
+            const Cesium = await import('cesium');
+            cesiumRef.current = Cesium;
+            
+            // Wait for viewer to be ready
+            let attempts = 0;
+            while (!viewerRef.current && attempts < 50) {
+                await new Promise(r => setTimeout(r, 100));
+                attempts++;
+            }
+            
+            if (viewerRef.current) {
+                cesiumReadyRef.current = true;
+                console.log('[EntityLayers] Cesium viewer ready, initializing layers...');
+            }
+        };
+        init();
     }, []);
 
     // ==========================
@@ -189,12 +204,12 @@ export default function EntityLayers() {
     // ==========================
     // Flight Dead Reckoning Worker - Single unified worker
     // ==========================
-    const cesiumReadyRef = useRef(false);
     const workerInitializedRef = useRef(false);
 
     // Initialize worker once when Cesium loads
     useEffect(() => {
         if (workerInitializedRef.current) return;
+        if (!cesiumReadyRef.current) return;
         
         const Cesium = cesiumRef.current;
         const viewer = viewerRef.current;
@@ -203,8 +218,6 @@ export default function EntityLayers() {
             // Cesium not ready yet
             return;
         }
-
-        cesiumReadyRef.current = true;
         workerInitializedRef.current = true;
 
         // Create single worker
@@ -260,6 +273,8 @@ export default function EntityLayers() {
     // Satellite Layer (SGP4 Worker)
     // ==========================
     useEffect(() => {
+        if (!cesiumReadyRef.current) return;
+        
         const Cesium = cesiumRef.current;
         const viewer = viewerRef.current;
         if (!Cesium || !viewer || !layers.satellites) return;
@@ -378,6 +393,8 @@ export default function EntityLayers() {
     // CCTV Markers Layer (Postgres Changes)
     // ==========================
     useEffect(() => {
+        if (!cesiumReadyRef.current) return;
+        
         const Cesium = cesiumRef.current;
         const viewer = viewerRef.current;
         if (!Cesium || !viewer) return;
@@ -494,9 +511,13 @@ export default function EntityLayers() {
     // Road Traffic Layer
     // ==========================
     useEffect(() => {
+        if (!cesiumReadyRef.current) return;
+        
         const Cesium = cesiumRef.current;
         const viewer = viewerRef.current;
         if (!Cesium || !viewer || !layers.traffic) return;
+
+        console.log('[EntityLayers] Initializing roads layer...');
 
         const store = entityStoreRef.current.roadParticles;
 
