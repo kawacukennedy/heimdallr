@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plane, Satellite, Camera, X, MapPin, Navigation, Clock, Speed } from 'lucide-react';
+import { Plane, Satellite, Camera, X, MapPin, Navigation, Gauge } from 'lucide-react';
 import GlassPanel from './GlassPanel';
 import { useUIStore } from '@/store/uiStore';
 import { useCesiumContext } from '@/providers/CesiumProvider';
@@ -113,7 +113,7 @@ export default function SelectedEntityPanel() {
                             {details.details.map((detail, idx) => (
                                 <div key={idx} className="flex justify-between items-center">
                                     <span className="text-white/40 text-xs flex items-center gap-1">
-                                        {detail.label === 'Altitude' || detail.label === 'Speed' ? <Speed size={10} /> :
+                                        {detail.label === 'Altitude' || detail.label === 'Speed' ? <Gauge size={10} /> :
                                             detail.label === 'Latitude' || detail.label === 'Longitude' ? <Navigation size={10} /> :
                                                 <MapPin size={10} />}
                                         {detail.label}
