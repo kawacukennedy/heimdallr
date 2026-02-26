@@ -30,6 +30,7 @@ export default function EntityLayers() {
             const Cesium = cesiumRef.current;
             const viewer = viewerRef.current;
             const store = entityStoreRef.current.civilianFlights;
+            const layerVisible = useUIStore.getState().layers.civilian;
             if (!Cesium || !viewer || !payload) return;
 
             payload.forEach((flight) => {
@@ -43,7 +44,7 @@ export default function EntityLayers() {
                             color: Cesium.Color.WHITE,
                             outlineColor: Cesium.Color.BLACK,
                             outlineWidth: 1,
-                            show: layers.civilian,
+                            show: layerVisible,
                         },
                         label: {
                             text: flight.callsign || flight.icao24,
@@ -75,7 +76,7 @@ export default function EntityLayers() {
             deadReckoningWorkerRef.current?.postMessage({ type: 'update', flights: payload });
             viewer.scene.requestRender();
         },
-        [viewerRef, entityStoreRef, layers.civilian]
+        [viewerRef, entityStoreRef]
     );
 
     // ==========================
@@ -86,6 +87,7 @@ export default function EntityLayers() {
             const Cesium = cesiumRef.current;
             const viewer = viewerRef.current;
             const store = entityStoreRef.current.militaryFlights;
+            const layerVisible = useUIStore.getState().layers.military;
             if (!Cesium || !viewer || !payload) return;
 
             payload.forEach((flight) => {
@@ -106,12 +108,12 @@ export default function EntityLayers() {
                             color: Cesium.Color.ORANGE,
                             outlineColor: Cesium.Color.RED,
                             outlineWidth: 1,
-                            show: layers.military && !modelUri,
+                            show: layerVisible && !modelUri,
                         },
                         ...(modelUri ? {
                             model: {
                                 uri: modelUri,
-                                show: layers.military,
+                                show: layerVisible,
                                 minimumPixelSize: 64,
                             }
                         } : {}),
@@ -141,7 +143,7 @@ export default function EntityLayers() {
 
             deadReckoningWorkerRef.current?.postMessage({ type: 'update', flights: payload });
         },
-        [viewerRef, entityStoreRef, layers.military]
+        [viewerRef, entityStoreRef]
     );
 
     // ==========================
@@ -511,19 +513,27 @@ export default function EntityLayers() {
     useEffect(() => {
         const supabase = getSupabaseClient();
 
+        console.log('[EntityLayers] Setting up realtime subscriptions...');
+
         const civilianChannel = supabase
             .channel(CHANNELS.CIVILIAN_FLIGHTS)
             .on('broadcast', { event: 'update' }, (msg: any) => {
+                console.log('[EntityLayers] Received civilian flights:', msg.payload?.length);
                 updateCivilianFlights(msg.payload);
             })
-            .subscribe();
+            .subscribe((status) => {
+                console.log('[EntityLayers] Civilian channel status:', status);
+            });
 
         const militaryChannel = supabase
             .channel(CHANNELS.MILITARY_FLIGHTS)
             .on('broadcast', { event: 'update' }, (msg: any) => {
+                console.log('[EntityLayers] Received military flights:', msg.payload?.length);
                 updateMilitaryFlights(msg.payload);
             })
-            .subscribe();
+            .subscribe((status) => {
+                console.log('[EntityLayers] Military channel status:', status);
+            });
 
         return () => {
             supabase.removeChannel(civilianChannel);

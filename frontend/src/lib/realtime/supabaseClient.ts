@@ -7,6 +7,9 @@ let supabase: SupabaseClient;
 
 export function getSupabaseClient(): SupabaseClient {
     if (!supabase) {
+        if (!supabaseUrl || !supabaseAnonKey) {
+            console.warn('Supabase credentials not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local');
+        }
         supabase = createClient(supabaseUrl, supabaseAnonKey, {
             realtime: {
                 params: {
