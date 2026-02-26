@@ -26,6 +26,9 @@ export default function EntityLayers() {
     // ==========================
     // Civilian Flights Layer
     // ==========================
+    
+    // Store flight data for CallbackProperty access
+    const flightDataRef = useRef<Map<string, FlightData>>(new Map());
 
     const updateCivilianFlights = useCallback(
         (payload: FlightData[]) => {
@@ -36,11 +39,23 @@ export default function EntityLayers() {
             if (!Cesium || !viewer || !payload) return;
 
             payload.forEach((flight) => {
+                // Store flight data for callback
+                flightDataRef.current.set(flight.icao24, flight);
+                
                 let entity = store.get(flight.icao24);
                 if (!entity) {
+                    // Create CallbackProperty for dynamic position
+                    const positionCallback = new Cesium.CallbackProperty((time, result) => {
+                        const data = flightDataRef.current.get(flight.icao24);
+                        if (data) {
+                            return Cesium.Cartesian3.fromDegrees(data.lon, data.lat, data.alt);
+                        }
+                        return Cesium.Cartesian3.fromDegrees(flight.lon, flight.lat, flight.alt);
+                    }, false);
+                    
                     entity = viewer.entities.add({
                         id: `civilian-${flight.icao24}`,
-                        position: Cesium.Cartesian3.fromDegrees(flight.lon, flight.lat, flight.alt),
+                        position: positionCallback,
                         point: {
                             pixelSize: 6,
                             color: Cesium.Color.WHITE,
@@ -64,24 +79,23 @@ export default function EntityLayers() {
                     });
                     store.set(flight.icao24, entity);
                 } else {
-                    // Update existing entity position
-                    const newPos = Cesium.Cartesian3.fromDegrees(
-                        flight.lon,
-                        flight.lat,
-                        flight.alt
-                    );
-                    entity.position = newPos as any;
+                    // Update properties for callback to read
                     if (entity.properties) {
                         (entity as any).properties = flight;
                     }
-                    // Debug: log position update for first few flights
-                    if (payload.length <= 10 || payload.indexOf(flight) < 3) {
-                        console.log(`[EntityLayers] Updated flight ${flight.icao24}: (${flight.lon.toFixed(2)}, ${flight.lat.toFixed(2)}, ${flight.alt})`);
-                    }
+                }
+            });
+            
+            // Remove flights that are no longer in the data
+            const currentIcaos = new Set(payload.map(f => f.icao24));
+            store.forEach((entity, icao) => {
+                if (!currentIcaos.has(icao)) {
+                    viewer.entities.remove(entity);
+                    store.delete(icao);
+                    flightDataRef.current.delete(icao);
                 }
             });
 
-            deadReckoningWorkerRef.current?.postMessage({ type: 'update', flights: payload });
             viewer.scene.requestRender();
         },
         [viewerRef, entityStoreRef]
@@ -90,6 +104,8 @@ export default function EntityLayers() {
     // ==========================
     // Military Flights Layer
     // ==========================
+    const militaryFlightDataRef = useRef<Map<string, MilitaryFlightData>>(new Map());
+
     const updateMilitaryFlights = useCallback(
         (payload: MilitaryFlightData[]) => {
             const Cesium = cesiumRef.current;
@@ -99,6 +115,9 @@ export default function EntityLayers() {
             if (!Cesium || !viewer || !payload) return;
 
             payload.forEach((flight) => {
+                // Store flight data for callback
+                militaryFlightDataRef.current.set(flight.icao24, flight);
+                
                 let entity = store.get(flight.icao24);
                 if (!entity) {
                     // Determine model based on aircraft type
@@ -108,9 +127,18 @@ export default function EntityLayers() {
                             ? '/assets/models/su57.glb'
                             : undefined;
 
+                    // Create CallbackProperty for dynamic position
+                    const positionCallback = new Cesium.CallbackProperty((time, result) => {
+                        const data = militaryFlightDataRef.current.get(flight.icao24);
+                        if (data) {
+                            return Cesium.Cartesian3.fromDegrees(data.lon, data.lat, data.alt);
+                        }
+                        return Cesium.Cartesian3.fromDegrees(flight.lon, flight.lat, flight.alt);
+                    }, false);
+
                     entity = viewer.entities.add({
                         id: `military-${flight.icao24}`,
-                        position: Cesium.Cartesian3.fromDegrees(flight.lon, flight.lat, flight.alt),
+                        position: positionCallback,
                         point: {
                             pixelSize: 8,
                             color: Cesium.Color.ORANGE,
@@ -140,16 +168,20 @@ export default function EntityLayers() {
                         properties: flight as any,
                     });
                     store.set(flight.icao24, entity);
-                } else {
-                    entity.position = Cesium.Cartesian3.fromDegrees(
-                        flight.lon,
-                        flight.lat,
-                        flight.alt
-                    ) as any;
                 }
             });
 
-            deadReckoningWorkerRef.current?.postMessage({ type: 'update', flights: payload });
+            // Remove flights that are no longer in the data
+            const currentIcaos = new Set(payload.map(f => f.icao24));
+            store.forEach((entity, icao) => {
+                if (!currentIcaos.has(icao)) {
+                    viewer.entities.remove(entity);
+                    store.delete(icao);
+                    militaryFlightDataRef.current.delete(icao);
+                }
+            });
+
+            viewer.scene.requestRender();
         },
         [viewerRef, entityStoreRef]
     );

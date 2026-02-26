@@ -49,9 +49,14 @@ export default function CesiumViewer({ onReady, children }: CesiumViewerProps) {
         // Scene configuration
         viewer.scene.backgroundColor = Cesium.Color.BLACK;
         viewer.scene.globe.enableLighting = true;
-        viewer.scene.globe.depthTestAgainstTerrain = true; // Required for true 3D topography and building intersection
+        viewer.scene.globe.depthTestAgainstTerrain = true;
         viewer.scene.highDynamicRange = true;
         viewer.scene.postProcessStages.fxaa.enabled = true;
+
+        // Enable continuous rendering for dynamic entities
+        viewer.scene.requestRenderMode = false;
+        viewer.scene.maximumRenderTimeChange = Infinity;
+        viewer.clock.shouldAnimate = true;
 
         // Camera & Control Polish for 3D navigation
         viewer.scene.screenSpaceCameraController.enableTilt = true;
