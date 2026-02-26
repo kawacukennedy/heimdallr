@@ -8,6 +8,7 @@ import RightPanel from '@/components/ui/RightPanel';
 import SearchOverlay from '@/components/ui/SearchOverlay';
 import SettingsModal from '@/components/ui/SettingsModal';
 import KeyboardShortcutsHelp from '@/components/ui/KeyboardShortcutsHelp';
+import SelectedEntityPanel from '@/components/ui/SelectedEntityPanel';
 import MapErrorBoundary from '@/components/map/MapErrorBoundary';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useUIStore } from '@/store/uiStore';
@@ -82,6 +83,7 @@ export default function Home() {
                 <LeftSidebar />
                 <BottomPanel />
                 <RightPanel />
+                <SelectedEntityPanel />
 
                 {/* Modals */}
                 <SearchOverlay />

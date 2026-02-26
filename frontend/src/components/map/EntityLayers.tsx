@@ -419,6 +419,9 @@ export default function EntityLayers() {
                     const lat = cam.location?.coordinates?.[1] ?? cam.lat ?? 0;
 
                     if (lon === 0 && lat === 0) return; // Skip invalid coordinates
+                    
+                    // Skip if already exists
+                    if (store.has(cam.id)) return;
 
                     const entity = viewer.entities.add({
                         id: `cctv-${cam.id}`,
@@ -646,6 +649,8 @@ export default function EntityLayers() {
     // ==========================
     // Entity click handler
     // ==========================
+    const selectedOrbitRef = useRef<any>(null);
+    
     useEffect(() => {
         const viewer = viewerRef.current;
         const Cesium = cesiumRef.current;
@@ -673,13 +678,63 @@ export default function EntityLayers() {
                 if (entity.label) {
                     entity.label.show = true;
                 }
+                
+                // For satellites, show orbit path
+                if (type === 'satellite') {
+                    const props = entity.properties;
+                    const satName = props?.name || entityId;
+                    const lat = props?.lat || 0;
+                    const lon = props?.lon || 0;
+                    const height = props?.height || 400;
+                    
+                    // Remove previous orbit
+                    if (selectedOrbitRef.current) {
+                        viewer.entities.remove(selectedOrbitRef.current);
+                    }
+                    
+                    // Draw orbit circle at satellite altitude
+                    const orbitRadius = height * 1000; // Convert km to meters
+                    const orbitPositions = [];
+                    for (let i = 0; i <= 360; i += 5) {
+                        const rad = (i * Math.PI) / 180;
+                        orbitPositions.push(Cesium.Cartesian3.fromRadians(rad, 0, orbitRadius));
+                    }
+                    
+                    selectedOrbitRef.current = viewer.entities.add({
+                        id: `orbit-${entityId}`,
+                        polyline: {
+                            positions: orbitPositions,
+                            width: 2,
+                            material: new Cesium.PolylineGlowMaterialProperty({
+                                glowPower: 0.3,
+                                color: Cesium.Color.CYAN.withAlpha(0.8),
+                            }),
+                        },
+                    });
+                    
+                    console.log(`[EntityLayers] Showing orbit for ${satName} at ${height}km`);
+                } else {
+                    // Remove orbit when clicking non-satellite
+                    if (selectedOrbitRef.current) {
+                        viewer.entities.remove(selectedOrbitRef.current);
+                        selectedOrbitRef.current = null;
+                    }
+                }
             } else {
                 selectEntity(null);
+                // Remove orbit when clicking empty space
+                if (selectedOrbitRef.current) {
+                    viewer.entities.remove(selectedOrbitRef.current);
+                    selectedOrbitRef.current = null;
+                }
             }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
         return () => {
             handler.destroy();
+            if (selectedOrbitRef.current) {
+                viewerRef.current?.entities.remove(selectedOrbitRef.current);
+            }
         };
     }, [viewerRef, selectEntity]);
 
