@@ -59,7 +59,7 @@ export const useUIStore = create<UIState>()(
                 civilian: true,
                 military: true,
                 satellites: true,
-                cctv: false,
+                cctv: true,
                 traffic: true,
             },
             toggleLayer: (layer) =>

@@ -264,6 +264,8 @@ export default function EntityLayers() {
         const viewer = viewerRef.current;
         if (!Cesium || !viewer || !layers.satellites) return;
 
+        console.log('[EntityLayers] Initializing satellite layer...');
+
         // Initialize SGP4 worker
         let worker: Worker;
         try {
@@ -271,8 +273,8 @@ export default function EntityLayers() {
                 new URL('../../workers/sgp4.worker.ts', import.meta.url),
                 { type: 'module' }
             );
-        } catch {
-            console.warn('SGP4 worker not available');
+        } catch (e) {
+            console.warn('[EntityLayers] SGP4 worker not available:', e);
             return;
         }
         sgp4WorkerRef.current = worker;
@@ -281,11 +283,13 @@ export default function EntityLayers() {
         const initSatellites = async () => {
             try {
                 const res = await fetch(`/api/satellites/tle`);
+                console.log('[EntityLayers] TLE fetch status:', res.status);
                 if (!res.ok) return;
                 const data = await res.json();
+                console.log('[EntityLayers] TLE data received, count:', Array.isArray(data) ? data.length : 'N/A');
                 worker.postMessage({ type: 'init', tles: data.tle_data || data.tles || data });
             } catch (err) {
-                console.warn('Failed to fetch TLE data:', err);
+                console.warn('[EntityLayers] Failed to fetch TLE data:', err);
             }
         };
 
@@ -294,6 +298,8 @@ export default function EntityLayers() {
             if (e.data.type === 'result') {
                 const store = entityStoreRef.current.satellites;
                 const positions = e.data.positions;
+
+                console.log(`[EntityLayers] Processing ${positions.length} satellite positions`);
 
                 positions.forEach((pos: any) => {
                     let entity = store.get(pos.id);
@@ -376,32 +382,39 @@ export default function EntityLayers() {
         const viewer = viewerRef.current;
         if (!Cesium || !viewer) return;
 
+        console.log('[EntityLayers] Initializing CCTV layer...');
+
         const supabase = getSupabaseClient();
         const store = entityStoreRef.current.cctvMarkers;
 
-        // Load initial CCTV cameras from database
+        // Load initial CCTV cameras from live API
         const loadInitialCameras = async () => {
             try {
-                const res = await fetch('/api/cctv');
+                const res = await fetch('/api/cctv/live');
+                console.log('[EntityLayers] CCTV fetch status:', res.status);
                 if (!res.ok) return;
 
                 const data = await res.json();
+                console.log(`[EntityLayers] Loading ${data.length} CCTV cameras`);
 
                 data.forEach((cam: any) => {
                     const lon = cam.location?.coordinates?.[0] ?? cam.lon ?? 0;
                     const lat = cam.location?.coordinates?.[1] ?? cam.lat ?? 0;
 
+                    if (lon === 0 && lat === 0) return; // Skip invalid coordinates
+
                     const entity = viewer.entities.add({
                         id: `cctv-${cam.id}`,
                         position: Cesium.Cartesian3.fromDegrees(lon, lat, 10),
-                        model: {
-                            uri: '/assets/models/cctv_camera.glb',
-                            scale: 10,
-                            minimumPixelSize: 32,
+                        point: {
+                            pixelSize: 8,
+                            color: Cesium.Color.CYAN,
+                            outlineColor: Cesium.Color.BLUE,
+                            outlineWidth: 1,
                             show: layers.cctv,
                         },
                         label: {
-                            text: cam.label || 'CCTV',
+                            text: cam.name || cam.description || 'CCTV',
                             show: false,
                             font: '10px Inter, sans-serif',
                             fillColor: Cesium.Color.WHITE,
@@ -414,7 +427,7 @@ export default function EntityLayers() {
                         properties: {
                             heading: cam.heading,
                             pitch: cam.pitch,
-                            url: cam.source_url,
+                            url: cam.url || cam.source_url,
                             city: cam.city,
                         } as any,
                     });
@@ -422,7 +435,7 @@ export default function EntityLayers() {
                 });
                 viewer.scene.requestRender();
             } catch (err) {
-                console.warn('Failed to load CCTV cameras:', err);
+                console.warn('[EntityLayers] Failed to load CCTV cameras:', err);
             }
         };
 
@@ -492,11 +505,19 @@ export default function EntityLayers() {
                 const backendUrl = process.env.NEXT_PUBLIC_API_URL || '';
                 // Load a default city; can be expanded to viewport-based loading
                 const res = await fetch(`${backendUrl}/api/roads/default`);
-                if (!res.ok) return;
+                if (!res.ok) {
+                    console.warn('[EntityLayers] Roads API returned:', res.status);
+                    return;
+                }
                 const data = await res.json();
                 const features = data.features || data;
 
-                if (!Array.isArray(features)) return;
+                if (!Array.isArray(features)) {
+                    console.warn('[EntityLayers] Roads data is not an array:', typeof features);
+                    return;
+                }
+
+                console.log(`[EntityLayers] Loading ${features.length} road features`);
 
                 features.forEach((feature: any, idx: number) => {
                     const coords = feature.geometry?.coordinates ||
@@ -525,7 +546,7 @@ export default function EntityLayers() {
 
                 viewer.scene.requestRender();
             } catch (err) {
-                console.warn('Failed to load road data:', err);
+                console.warn('[EntityLayers] Failed to load road data:', err);
             }
         };
 
