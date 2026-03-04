@@ -54,7 +54,7 @@ export default function TopBar() {
         <div className="fixed top-0 left-0 right-0 z-50" style={{ height: '44px' }}>
             <GlassPanel elevation="medium" className="h-full mx-1 mt-1">
                 <div className="flex items-center justify-between h-full px-3">
-                    {/* Left: WORLDVIEW branding + metrics */}
+                    {/* Left: HEIMDALLR branding + metrics */}
                     <div className="flex items-center gap-3">
                         {/* Logo */}
                         <div className="flex items-center gap-2">
@@ -62,7 +62,7 @@ export default function TopBar() {
                                 <span className="text-cyan-400 font-bold text-[9px]">⊕</span>
                             </div>
                             <div className="leading-none">
-                                <div className="text-[11px] font-bold tracking-[0.2em] text-cyan-300">WORLDVIEW</div>
+                                <div className="text-[11px] font-bold tracking-[0.2em] text-cyan-300">HEIMDALLR</div>
                                 <div className="text-[7px] tracking-[0.15em] text-white/25 uppercase">We Place Left Behind</div>
                             </div>
                         </div>

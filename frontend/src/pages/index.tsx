@@ -55,7 +55,7 @@ export default function Home() {
     return (
         <>
             <Head>
-                <title>WORLDVIEW — Geospatial Intelligence Platform</title>
+                <title>HEIMDALLR — Geospatial Intelligence Platform</title>
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <link rel="manifest" href="/manifest.json" />
             </Head>
