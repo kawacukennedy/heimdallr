@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plane, Satellite, Camera, X, MapPin, Navigation, Gauge } from 'lucide-react';
+import { Plane, Satellite, Camera, Anchor, X, MapPin, Navigation, Gauge } from 'lucide-react';
 import GlassPanel from './GlassPanel';
 import { useUIStore } from '@/store/uiStore';
 import { useCesiumContext } from '@/providers/CesiumProvider';
@@ -29,15 +29,15 @@ export default function SelectedEntityPanel() {
 
             const props = entity.properties;
             return {
-                icon: <Plane size={20} className="text-white/80" />,
+                icon: <Plane size={14} className="text-white/60" />,
                 title: props?.callsign || selectedEntityId,
-                type: 'Flight',
+                type: 'FLIGHT',
                 details: [
                     { label: 'ICAO', value: props?.icao24 || 'N/A' },
-                    { label: 'Altitude', value: props?.alt ? `${props.alt} m` : 'N/A' },
-                    { label: 'Speed', value: props?.velocity ? `${props.velocity} m/s` : 'N/A' },
-                    { label: 'Heading', value: props?.heading ? `${props.heading}°` : 'N/A' },
-                    { label: 'Country', value: props?.origin_country || 'N/A' },
+                    { label: 'ALT', value: props?.alt ? `${props.alt}M` : 'N/A' },
+                    { label: 'SPD', value: props?.velocity ? `${props.velocity}M/S` : 'N/A' },
+                    { label: 'HDG', value: props?.heading ? `${props.heading}°` : 'N/A' },
+                    { label: 'ORG', value: props?.origin_country || 'N/A' },
                 ],
             };
         }
@@ -48,14 +48,14 @@ export default function SelectedEntityPanel() {
 
             const props = entity.properties;
             return {
-                icon: <Satellite size={20} className="text-white/80" />,
+                icon: <Satellite size={14} className="text-amber-400/70" />,
                 title: props?.name || selectedEntityId,
-                type: 'Satellite',
+                type: 'SATELLITE',
                 details: [
-                    { label: 'Altitude', value: props?.height ? `${props.height.toFixed(0)} km` : 'N/A' },
-                    { label: 'Orbit Type', value: props?.orbitType || 'N/A' },
-                    { label: 'Latitude', value: props?.lat?.toFixed(2) || 'N/A' },
-                    { label: 'Longitude', value: props?.lon?.toFixed(2) || 'N/A' },
+                    { label: 'ALT', value: props?.height ? `${props.height.toFixed(0)}KM` : 'N/A' },
+                    { label: 'ORB', value: props?.orbitType || 'N/A' },
+                    { label: 'LAT', value: props?.lat?.toFixed(2) || 'N/A' },
+                    { label: 'LON', value: props?.lon?.toFixed(2) || 'N/A' },
                 ],
             };
         }
@@ -66,12 +66,31 @@ export default function SelectedEntityPanel() {
 
             const props = entity.properties;
             return {
-                icon: <Camera size={20} className="text-white/80" />,
-                title: props?.name || 'CCTV Camera',
+                icon: <Camera size={14} className="text-cyan-400" />,
+                title: props?.name || 'CCTV CAMERA',
                 type: 'CCTV',
                 details: [
-                    { label: 'City', value: props?.city || 'N/A' },
+                    { label: 'CITY', value: props?.city || 'N/A' },
                     { label: 'URL', value: props?.url || 'N/A', isLink: true },
+                ],
+            };
+        }
+
+        if (selectedEntityType === 'ship') {
+            let entity = store.ships.get(selectedEntityId.replace('ship-', ''));
+            if (!entity) return null;
+
+            const props = entity.properties;
+            return {
+                icon: <Anchor size={14} className="text-blue-400" />,
+                title: props?.name || selectedEntityId,
+                type: 'VESSEL',
+                details: [
+                    { label: 'MMSI', value: props?.mmsi || 'N/A' },
+                    { label: 'SPD', value: props?.speed ? `${props.speed}KN` : 'N/A' },
+                    { label: 'HDG', value: props?.heading ? `${props.heading}°` : 'N/A' },
+                    { label: 'DEST', value: props?.destination || 'N/A' },
+                    { label: 'FLAG', value: props?.flag || 'N/A' },
                 ],
             };
         }
@@ -88,34 +107,31 @@ export default function SelectedEntityPanel() {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    className="fixed top-20 right-4 z-40 w-80"
+                    className="fixed top-14 right-4 z-40 w-64"
                 >
                     <GlassPanel elevation="high" className="overflow-hidden">
                         {/* Header */}
-                        <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/5">
-                            <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.06] bg-white/[0.02]">
+                            <div className="flex items-center gap-2">
                                 {details.icon}
                                 <div>
-                                    <h3 className="text-white font-medium text-sm">{details.title}</h3>
-                                    <p className="text-white/40 text-xs">{details.type}</p>
+                                    <h3 className="text-[10px] font-mono font-bold text-white/80 uppercase tracking-wider">{details.title}</h3>
+                                    <p className="text-[7px] font-mono text-white/25 uppercase tracking-widest">{details.type}</p>
                                 </div>
                             </div>
                             <button
                                 onClick={handleClose}
-                                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                                className="p-1 hover:bg-white/[0.06] rounded-sm transition-colors"
                             >
-                                <X size={16} className="text-white/50" />
+                                <X size={12} className="text-white/30" />
                             </button>
                         </div>
 
                         {/* Details */}
-                        <div className="p-4 space-y-3">
+                        <div className="p-3 space-y-1.5">
                             {details.details.map((detail, idx) => (
                                 <div key={idx} className="flex justify-between items-center">
-                                    <span className="text-white/40 text-xs flex items-center gap-1">
-                                        {detail.label === 'Altitude' || detail.label === 'Speed' ? <Gauge size={10} /> :
-                                            detail.label === 'Latitude' || detail.label === 'Longitude' ? <Navigation size={10} /> :
-                                                <MapPin size={10} />}
+                                    <span className="text-[8px] font-mono text-white/30 uppercase tracking-wider">
                                         {detail.label}
                                     </span>
                                     {detail.isLink ? (
@@ -123,19 +139,19 @@ export default function SelectedEntityPanel() {
                                             href={detail.value}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-accent text-xs hover:underline truncate max-w-[150px]"
+                                            className="text-[9px] font-mono text-cyan-400 hover:underline"
                                         >
-                                            View Camera
+                                            VIEW FEED
                                         </a>
                                     ) : (
-                                        <span className="text-white text-xs font-medium">{detail.value}</span>
+                                        <span className="text-[9px] font-mono text-white/65">{detail.value}</span>
                                     )}
                                 </div>
                             ))}
                         </div>
 
-                        {/* Action buttons */}
-                        <div className="p-4 pt-0 flex gap-2">
+                        {/* Actions */}
+                        <div className="px-3 pb-3 flex gap-1.5">
                             <button
                                 onClick={() => {
                                     const viewer = viewerRef.current;
@@ -149,11 +165,12 @@ export default function SelectedEntityPanel() {
                                         entity = store.satellites.get(selectedEntityId);
                                     } else if (selectedEntityType === 'cctv') {
                                         entity = store.cctvMarkers.get(selectedEntityId.replace('cctv-', ''));
+                                    } else if (selectedEntityType === 'ship') {
+                                        entity = store.ships.get(selectedEntityId.replace('ship-', ''));
                                     }
 
                                     if (entity?.position) {
                                         let pos = entity.position;
-                                        // If it's a CallbackProperty, get the value
                                         if (pos && pos.getValue) {
                                             pos = pos.getValue(viewer.clock.currentTime);
                                         }
@@ -165,9 +182,9 @@ export default function SelectedEntityPanel() {
                                         }
                                     }
                                 }}
-                                className="flex-1 py-2 px-4 bg-accent/20 hover:bg-accent/30 text-accent text-xs font-medium rounded-lg transition-colors"
+                                className="flex-1 py-1.5 px-3 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/25 text-cyan-300 text-[8px] font-mono font-medium tracking-wider uppercase transition-colors"
                             >
-                                Fly To
+                                FLY TO
                             </button>
                         </div>
                     </GlassPanel>
