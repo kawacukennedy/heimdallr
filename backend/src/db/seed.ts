@@ -15,14 +15,16 @@ export async function runMigrationsAndSeed() {
         // Force direct database connection for migrations because the Supabase 6543 Pooler times out 
         // with prepared statements on IPv4 Render environments.
         let dbUrl = env.DATABASE_URL;
-        if (dbUrl.includes('.supabase.co') && dbUrl.includes('6543')) {
-            // Keep the 6543 port for IPv4 support, but disable pgbouncer if needed for migrations.
-            // Migrations usually require session mode pooler string (port 5432) OR direct connection.
-            // Since Supabase direct connection is IPv6 only and Render lacks IPv6 support out of the box,
-            // we MUST use the pooler string (with session mode ideally) but since we only have one URL,
-            // we will try using `?pgbouncer=true` and dropping prepared statements instead of bypassing the pooler.
-            dbUrl = dbUrl.replace('?pgbouncer=true', '');
-            dbUrl = dbUrl.replace('&pgbouncer=true', '');
+
+        // Supabase direct connection (5432) is IPv6-only. Render does not support IPv6 routing well.
+        // We must rewrite 5432 to 6543 (Supabase's IPv4 pooling port) to allow migrations to succeed.
+        if (dbUrl.includes('.supabase.co')) {
+            if (dbUrl.includes(':5432/')) {
+                console.log('⚠️ Rewriting Supabase connection from IPv6 Direct (5432) to IPv4 Pooler (6543)...');
+                dbUrl = dbUrl.replace(':5432/', ':6543/');
+            }
+            // Strip pgbouncer query params as postgres.js doesn't need them and we disable prepared statements below.
+            dbUrl = dbUrl.replace('?pgbouncer=true', '').replace('&pgbouncer=true', '');
         }
 
         const sql = postgres(dbUrl, {

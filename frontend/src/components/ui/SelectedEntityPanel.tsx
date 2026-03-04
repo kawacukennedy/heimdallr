@@ -30,7 +30,7 @@ export default function SelectedEntityPanel() {
             const props = entity.properties;
             return {
                 icon: <Plane size={14} className="text-white/60" />,
-                title: props?.callsign || selectedEntityId,
+                title: String(props?.callsign ?? selectedEntityId),
                 type: 'FLIGHT',
                 details: [
                     { label: 'ICAO', value: props?.icao24 || 'N/A' },
@@ -49,7 +49,7 @@ export default function SelectedEntityPanel() {
             const props = entity.properties;
             return {
                 icon: <Satellite size={14} className="text-amber-400/70" />,
-                title: props?.name || selectedEntityId,
+                title: String(props?.name ?? selectedEntityId),
                 type: 'SATELLITE',
                 details: [
                     { label: 'ALT', value: props?.height ? `${props.height.toFixed(0)}KM` : 'N/A' },
@@ -67,7 +67,7 @@ export default function SelectedEntityPanel() {
             const props = entity.properties;
             return {
                 icon: <Camera size={14} className="text-cyan-400" />,
-                title: props?.name || 'CCTV CAMERA',
+                title: String(props?.name ?? 'CCTV CAMERA'),
                 type: 'CCTV',
                 details: [
                     { label: 'CITY', value: props?.city || 'N/A' },
@@ -83,7 +83,7 @@ export default function SelectedEntityPanel() {
             const props = entity.properties;
             return {
                 icon: <Anchor size={14} className="text-blue-400" />,
-                title: props?.name || selectedEntityId,
+                title: String(props?.name ?? selectedEntityId),
                 type: 'VESSEL',
                 details: [
                     { label: 'MMSI', value: props?.mmsi || 'N/A' },
@@ -103,7 +103,7 @@ export default function SelectedEntityPanel() {
             const props = entity.properties;
             return {
                 icon: <MapPin size={14} className="text-red-500" />,
-                title: targetName,
+                title: String(targetName),
                 type: 'STRATEGIC TARGET',
                 details: [
                     { label: 'LAT', value: props?.lat?.toFixed(4) || 'N/A' },
