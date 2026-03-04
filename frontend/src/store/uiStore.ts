@@ -102,13 +102,11 @@ export const useUIStore = create<UIState>()(
                 set({
                     selectedEntityId: id,
                     selectedEntityType: type,
-                    rightPanelOpen: id !== null,
                 }),
             clearSelection: () =>
                 set({
                     selectedEntityId: null,
                     selectedEntityType: null,
-                    rightPanelOpen: false,
                 }),
 
             // Camera

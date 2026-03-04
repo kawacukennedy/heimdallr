@@ -115,8 +115,11 @@ export async function roadsRoutes(fastify: FastifyInstance) {
                 });
             } catch (error: any) {
                 fastify.log.error({ error: error.message }, 'Roads API failed');
-                return reply.status(500).send({
-                    error: 'Failed to fetch road data',
+                // Gracefully return empty features on Overpass timeout or errors
+                return reply.status(200).send({
+                    type: 'FeatureCollection',
+                    features: [],
+                    error: 'Overpass API unavailable or timed out',
                     message: error.message,
                 });
             }
