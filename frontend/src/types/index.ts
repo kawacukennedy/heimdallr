@@ -61,6 +61,49 @@ export interface RoadNetwork {
     interpolated_points: [number, number][];
 }
 
+export interface ShipData {
+    mmsi: string;
+    name: string;
+    shipType: string;
+    lat: number;
+    lon: number;
+    heading: number;
+    speed: number;
+    course: number;
+    destination: string;
+    flag: string;
+    length: number;
+    width: number;
+    aisTimestamp: number;
+}
+
+export interface GpsJammingZone {
+    id?: string;
+    centerLat: number;
+    centerLon: number;
+    radiusDeg: number;
+    severity: number;
+    affectedAircraft: number;
+    avgNacp: number;
+    avgNic: number;
+    bounds: number[][];
+    active?: boolean;
+}
+
+export interface SatelliteFootprint {
+    satId: string;
+    satName: string;
+    subPointLat: number;
+    subPointLon: number;
+    altitude: number;
+    footprintRadiusKm: number;
+    footprintBounds: number[][];
+    targetInView: boolean;
+    targetName?: string;
+    targetLat?: number;
+    targetLon?: number;
+}
+
 // ======== Camera ========
 
 export interface CameraPosition {
@@ -80,11 +123,11 @@ export interface Bookmark {
 
 // ======== UI State ========
 
-export type LayerKey = 'civilian' | 'military' | 'satellites' | 'cctv' | 'traffic';
+export type LayerKey = 'civilian' | 'military' | 'satellites' | 'cctv' | 'traffic' | 'ships' | 'gpsJamming';
 
 export type ShaderPreset = 'standard' | 'nightVision' | 'thermal' | 'crt' | 'edgeDetection';
 
-export type EntityType = 'flight' | 'military' | 'satellite' | 'cctv' | null;
+export type EntityType = 'flight' | 'military' | 'satellite' | 'cctv' | 'ship' | null;
 
 export interface SelectedEntity {
     id: string;
