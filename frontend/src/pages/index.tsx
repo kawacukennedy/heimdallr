@@ -25,6 +25,7 @@ const CctvProjectiveTexture = dynamic(() => import('@/components/map/CctvProject
 const MapControls = dynamic(() => import('@/components/map/MapControls'), { ssr: false });
 const Compass = dynamic(() => import('@/components/map/Compass'), { ssr: false });
 const ZoomControls = dynamic(() => import('@/components/map/ZoomControls'), { ssr: false });
+const TimelinePlayback = dynamic(() => import('@/components/map/TimelinePlayback'), { ssr: false });
 
 // Shader theme classes
 const SHADER_THEME_CLASS: Record<string, string> = {
@@ -46,7 +47,7 @@ export default function Home() {
     useKeyboardShortcuts();
 
     if (!mounted) {
-        return <div className="w-screen h-screen bg-black" />; // SSR placeholder
+        return <div className="w-screen h-screen bg-black" />;
     }
 
     const themeClass = SHADER_THEME_CLASS[activeShader] || '';
@@ -54,7 +55,7 @@ export default function Home() {
     return (
         <>
             <Head>
-                <title>Heimdallr – Geospatial Intelligence Dashboard</title>
+                <title>WORLDVIEW — Geospatial Intelligence Platform</title>
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <link rel="manifest" href="/manifest.json" />
             </Head>
@@ -82,8 +83,13 @@ export default function Home() {
                 <TopBar />
                 <LeftSidebar />
                 <BottomPanel />
+                <TimelinePlayback />
                 <RightPanel />
                 <SelectedEntityPanel />
+
+                {/* CRT Scan-line & Noise Overlays */}
+                <div className="crt-overlay" />
+                <div className="noise-overlay" />
 
                 {/* Modals */}
                 <SearchOverlay />
