@@ -95,6 +95,23 @@ export default function SelectedEntityPanel() {
             };
         }
 
+        if (selectedEntityType === 'target') {
+            const targetName = selectedEntityId.replace('target-', '');
+            let entity = store.groundTargets.get(targetName);
+            if (!entity) return null;
+
+            const props = entity.properties;
+            return {
+                icon: <MapPin size={14} className="text-red-500" />,
+                title: targetName,
+                type: 'STRATEGIC TARGET',
+                details: [
+                    { label: 'LAT', value: props?.lat?.toFixed(4) || 'N/A' },
+                    { label: 'LON', value: props?.lon?.toFixed(4) || 'N/A' },
+                ],
+            };
+        }
+
         return null;
     };
 
@@ -167,6 +184,8 @@ export default function SelectedEntityPanel() {
                                         entity = store.cctvMarkers.get(selectedEntityId.replace('cctv-', ''));
                                     } else if (selectedEntityType === 'ship') {
                                         entity = store.ships.get(selectedEntityId.replace('ship-', ''));
+                                    } else if (selectedEntityType === 'target') {
+                                        entity = store.groundTargets.get(selectedEntityId.replace('target-', ''));
                                     }
 
                                     if (entity?.position) {

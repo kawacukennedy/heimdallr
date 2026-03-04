@@ -798,6 +798,156 @@ export default function EntityLayers() {
     }, [viewerRef, entityStoreRef]);
 
     // ==========================
+    // ==========================
+    // Ground Targets Layer (Strategic POIs)
+    // ==========================
+    useEffect(() => {
+        if (!cesiumReadyRef.current) return;
+
+        const Cesium = cesiumRef.current;
+        const viewer = viewerRef.current;
+        if (!Cesium || !viewer || !layers.satellites) return;
+
+        const store = entityStoreRef.current.groundTargets;
+
+        const loadTargets = async () => {
+            try {
+                const res = await fetch('/api/satellite-flyover/targets');
+                if (!res.ok) return;
+                const targets = await res.json();
+
+                targets.forEach((target: any) => {
+                    if (store.has(target.name)) return;
+
+                    const entity = viewer.entities.add({
+                        id: `target-${target.name}`,
+                        position: Cesium.Cartesian3.fromDegrees(target.lon, target.lat),
+                        billboard: {
+                            image: '/assets/icons/target-crosshair.png', // Fallback to point if missing
+                            width: 24,
+                            height: 24,
+                            color: Cesium.Color.RED.withAlpha(0.8),
+                            show: layers.satellites,
+                            verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                        },
+                        point: {
+                            pixelSize: 8,
+                            color: Cesium.Color.RED,
+                            outlineColor: Cesium.Color.BLACK,
+                            outlineWidth: 2,
+                            show: layers.satellites,
+                        },
+                        label: {
+                            text: target.name.toUpperCase(),
+                            font: '10px JetBrains Mono, monospace',
+                            fillColor: Cesium.Color.RED,
+                            outlineColor: Cesium.Color.BLACK,
+                            outlineWidth: 2,
+                            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                            pixelOffset: new Cesium.Cartesian2(0, 20),
+                            show: layers.satellites,
+                        },
+                        properties: target,
+                    });
+                    store.set(target.name, entity);
+                });
+            } catch (err) {
+                console.warn('[EntityLayers] Failed to load strategic targets:', err);
+            }
+        };
+
+        loadTargets();
+    }, [viewerRef, entityStoreRef, layers.satellites]);
+
+    // ==========================
+    // Satellite Footprints & Target Correlation
+    // ==========================
+    useEffect(() => {
+        if (!cesiumReadyRef.current) return;
+
+        const Cesium = cesiumRef.current;
+        const viewer = viewerRef.current;
+        if (!Cesium || !viewer || !layers.satellites) return;
+
+        const footprintStore = entityStoreRef.current.satelliteFootprints;
+        const targetStore = entityStoreRef.current.groundTargets;
+
+        const pollFootprints = async () => {
+            const satStore = entityStoreRef.current.satellites;
+            if (satStore.size === 0) return;
+
+            // Prepare active satellite data for backend calculation
+            const activeSats = Array.from(satStore.entries()).map(([id, entity]) => {
+                const props = entity.properties;
+                const pos = Cesium.Cartographic.fromCartesian(entity.position.getValue(Cesium.JulianDate.now()));
+                return {
+                    id,
+                    name: props.name,
+                    lat: Cesium.Math.toDegrees(pos.latitude),
+                    lon: Cesium.Math.toDegrees(pos.longitude),
+                    altitude: pos.height / 1000
+                };
+            }).slice(0, 20); // Limit to top 20 for performance
+
+            try {
+                const res = await fetch(`/api/satellite-flyover?satellites=${encodeURIComponent(JSON.stringify(activeSats))}`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                // Update footprints
+                data.footprints.forEach((fp: any) => {
+                    let entity = footprintStore.get(fp.satId);
+                    const positions = Cesium.Cartesian3.fromDegreesArray(
+                        fp.footprintBounds.flat()
+                    );
+
+                    if (!entity) {
+                        entity = viewer.entities.add({
+                            id: `footprint-${fp.satId}`,
+                            polygon: {
+                                hierarchy: positions,
+                                material: Cesium.Color.CYAN.withAlpha(0.15),
+                                outline: true,
+                                outlineColor: Cesium.Color.CYAN.withAlpha(0.4),
+                                outlineWidth: 1,
+                                show: layers.satellites,
+                            }
+                        });
+                        footprintStore.set(fp.satId, entity);
+                    } else {
+                        entity.polygon.hierarchy = positions;
+                    }
+
+                    // Correlate with targets
+                    if (fp.targetInView && fp.targetName) {
+                        const targetEntity = targetStore.get(fp.targetName);
+                        if (targetEntity) {
+                            // Highlight correlated target
+                            if (targetEntity.point) targetEntity.point.color = Cesium.Color.LIME;
+                            if (targetEntity.label) targetEntity.label.fillColor = Cesium.Color.LIME;
+                        }
+                    }
+                });
+
+                // Reset targets not in view of any satellite
+                const activeTargetNames = new Set(data.footprints.filter((f: any) => f.targetInView).map((f: any) => f.targetName));
+                targetStore.forEach((entity, name) => {
+                    if (!activeTargetNames.has(name)) {
+                        if (entity.point) entity.point.color = Cesium.Color.RED;
+                        if (entity.label) entity.label.fillColor = Cesium.Color.RED;
+                    }
+                });
+
+            } catch (err) {
+                console.warn('[EntityLayers] Footprint calculation failed:', err);
+            }
+        };
+
+        const interval = setInterval(pollFootprints, 5000);
+        return () => clearInterval(interval);
+    }, [viewerRef, entityStoreRef, layers.satellites]);
+
+    // ==========================
     // Layer visibility sync
     // ==========================
     useEffect(() => {
@@ -824,6 +974,14 @@ export default function EntityLayers() {
         store.gpsJammingZones.forEach((entity) => {
             if (entity.polygon) entity.polygon.show = layers.gpsJamming;
             if (entity.label) entity.label.show = layers.gpsJamming;
+        });
+        store.satelliteFootprints.forEach((entity) => {
+            if (entity.polygon) entity.polygon.show = layers.satellites;
+        });
+        store.groundTargets.forEach((entity) => {
+            if (entity.billboard) entity.billboard.show = layers.satellites;
+            if (entity.point) entity.point.show = layers.satellites;
+            if (entity.label) entity.label.show = layers.satellites;
         });
         viewerRef.current?.scene.requestRender();
     }, [layers, entityStoreRef, viewerRef]);

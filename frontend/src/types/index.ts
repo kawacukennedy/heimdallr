@@ -127,7 +127,7 @@ export type LayerKey = 'civilian' | 'military' | 'satellites' | 'cctv' | 'traffi
 
 export type ShaderPreset = 'standard' | 'nightVision' | 'thermal' | 'crt' | 'edgeDetection';
 
-export type EntityType = 'flight' | 'military' | 'satellite' | 'cctv' | 'ship' | null;
+export type EntityType = 'flight' | 'military' | 'satellite' | 'cctv' | 'ship' | 'target' | null;
 
 export interface SelectedEntity {
     id: string;
