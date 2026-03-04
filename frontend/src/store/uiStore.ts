@@ -61,6 +61,8 @@ export const useUIStore = create<UIState>()(
                 satellites: true,
                 cctv: true,
                 traffic: true,
+                ships: true,
+                gpsJamming: true,
             },
             toggleLayer: (layer) =>
                 set((state) => ({
@@ -127,6 +129,12 @@ export const useUIStore = create<UIState>()(
             },
             updateSettings: (newSettings) =>
                 set((s) => ({ settings: { ...s.settings, ...newSettings } })),
+
+            // Playback mode
+            playbackMode: false,
+            playbackTimeRange: null as { start: string; end: string } | null,
+            setPlaybackMode: (enabled: boolean) => set({ playbackMode: enabled }),
+            setPlaybackTimeRange: (range: { start: string; end: string } | null) => set({ playbackTimeRange: range }),
 
             // Connection
             isConnected: false,

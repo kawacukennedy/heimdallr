@@ -7,6 +7,8 @@ export interface EntityStoreType {
     satellites: Map<string, any>;
     cctvMarkers: Map<string, any>;
     roadParticles: Map<string, any>;
+    ships: Map<string, any>;
+    gpsJammingZones: Map<string, any>;
 }
 
 export function createEntityStore(): EntityStoreType {
@@ -16,6 +18,8 @@ export function createEntityStore(): EntityStoreType {
         satellites: new Map(),
         cctvMarkers: new Map(),
         roadParticles: new Map(),
+        ships: new Map(),
+        gpsJammingZones: new Map(),
     };
 }
 
