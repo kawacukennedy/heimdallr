@@ -11,6 +11,10 @@ import { metricsRoutes } from './routes/metrics';
 import { satelliteRoutes } from './routes/satellites';
 import { cctvRoutes } from './routes/cctv';
 import { analyticsRoutes } from './routes/analytics';
+import { shipsRoutes } from './routes/ships';
+import { czmlRoutes } from './routes/czml';
+import { gpsJammingRoutes } from './routes/gpsJamming';
+import { satelliteFlyoverRoutes } from './routes/satelliteFlyover';
 import { startScheduler } from './jobs/scheduler';
 import { httpRequestsTotal, httpRequestDuration } from './routes/metrics';
 import { runMigrationsAndSeed } from './db/seed';
@@ -73,6 +77,11 @@ async function main() {
     await fastify.register(satelliteRoutes);
     await fastify.register(cctvRoutes);
     await fastify.register(analyticsRoutes);
+    // New feature routes
+    await fastify.register(shipsRoutes);
+    await fastify.register(czmlRoutes);
+    await fastify.register(gpsJammingRoutes);
+    await fastify.register(satelliteFlyoverRoutes);
 
     // --- Graceful shutdown ---
     const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM'];
