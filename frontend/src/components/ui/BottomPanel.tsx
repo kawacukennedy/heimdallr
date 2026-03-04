@@ -2,20 +2,28 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plane, Satellite, Camera, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plane, Satellite, Camera, Anchor, ChevronDown, ChevronUp } from 'lucide-react';
 import GlassPanel from './GlassPanel';
 import CctvThumbnailGrid from './CctvThumbnailGrid';
 import { useUIStore } from '@/store/uiStore';
 import { useCesiumContext } from '@/providers/CesiumProvider';
 import type { CCTVCamera } from '@/types';
 
-const TABS = ['Flights', 'Satellites', 'CCTV'] as const;
+const TABS = ['Flights', 'Satellites', 'Ships', 'CCTV'] as const;
 type TabName = (typeof TABS)[number];
 
 const TAB_ICONS: Record<TabName, React.ElementType> = {
     Flights: Plane,
     Satellites: Satellite,
+    Ships: Anchor,
     CCTV: Camera,
+};
+
+const TAB_COLORS: Record<TabName, string> = {
+    Flights: 'text-white/60',
+    Satellites: 'text-amber-400/70',
+    Ships: 'text-blue-400/70',
+    CCTV: 'text-cyan-400/70',
 };
 
 interface EntityEntry {
@@ -33,9 +41,9 @@ export default function BottomPanel() {
     const [activeTab, setActiveTab] = useState<TabName>('Flights');
     const [flights, setFlights] = useState<EntityEntry[]>([]);
     const [sats, setSats] = useState<EntityEntry[]>([]);
+    const [ships, setShips] = useState<EntityEntry[]>([]);
     const [cctvCameras, setCctvCameras] = useState<CCTVCamera[]>([]);
 
-    // Refresh entity data every 2 seconds
     const refreshData = useCallback(() => {
         const store = entityStoreRef.current;
 
@@ -46,11 +54,10 @@ export default function BottomPanel() {
             const callsign = props?.callsign ?? props?._callsign ?? id;
             const alt = props?.alt ?? props?._alt ?? '—';
             const velocity = props?.velocity ?? props?._velocity ?? '—';
-            const heading = props?.heading ?? props?._heading ?? '—';
             flightEntries.push({
                 id: entity.id || `civilian-${id}`,
                 label: String(callsign),
-                detail: `${alt} m · ${velocity} m/s · ${heading}°`,
+                detail: `${alt}m · ${velocity}m/s`,
                 type: 'flight',
             });
         });
@@ -61,7 +68,7 @@ export default function BottomPanel() {
             flightEntries.push({
                 id: entity.id || `military-${id}`,
                 label: `⚔ ${callsign}`,
-                detail: `${alt} m · MILITARY`,
+                detail: `${alt}m · MIL`,
                 type: 'military',
             });
         });
@@ -73,30 +80,43 @@ export default function BottomPanel() {
             const props = entity.properties;
             const name = props?.name ?? props?._name ?? id;
             const height = props?.height ?? props?._height ?? '—';
-            const orbit = props?.orbitType ?? props?._orbitType ?? '—';
             satEntries.push({
                 id: entity.id || id,
                 label: String(name),
-                detail: `${typeof height === 'number' ? height.toFixed(0) : height} km · ${orbit}`,
+                detail: `${typeof height === 'number' ? height.toFixed(0) : height}km`,
                 type: 'satellite',
             });
         });
         setSats(satEntries);
 
-        // CCTV count -> cameras array
+        // CCTV
         const cameraEntries: CCTVCamera[] = [];
         store.cctvMarkers.forEach((entity, id) => {
             cameraEntries.push({
                 id: entity.id || id,
-                lat: 0,
-                lon: 0,
-                source_url: '',
-                heading: 0,
-                pitch: 0,
-                label: entity.name || `Camera ${id}`,
+                lat: 0, lon: 0, source_url: '', heading: 0, pitch: 0,
+                label: entity.name || `CAM-${id}`,
             });
         });
         setCctvCameras(cameraEntries);
+
+        // Ships
+        const shipEntries: EntityEntry[] = [];
+        if (store.ships) {
+            store.ships.forEach((entity: any, id: string) => {
+                const props = entity.properties;
+                const name = props?.name ?? props?._name ?? id;
+                const speed = props?.speed ?? props?._speed ?? '—';
+                const dest = props?.destination ?? props?._destination ?? '—';
+                shipEntries.push({
+                    id: entity.id || `ship-${id}`,
+                    label: String(name),
+                    detail: `${speed}kn · ${dest}`,
+                    type: 'ship',
+                });
+            });
+        }
+        setShips(shipEntries);
     }, [entityStoreRef]);
 
     useEffect(() => {
@@ -114,35 +134,38 @@ export default function BottomPanel() {
             <AnimatePresence>
                 {bottomPanelOpen && (
                     <motion.div
-                        className="fixed bottom-2 left-2 right-2 z-30"
-                        style={{ height: '200px' }}
-                        initial={{ y: 220 }}
+                        className="fixed bottom-1 left-1 right-1 z-30"
+                        style={{ height: '180px' }}
+                        initial={{ y: 200 }}
                         animate={{ y: 0 }}
-                        exit={{ y: 220 }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+                        exit={{ y: 200 }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                     >
                         <GlassPanel elevation="medium" className="h-full flex flex-col overflow-hidden">
                             {/* Tab header */}
-                            <div className="flex items-center justify-between border-b border-white/8 px-2">
+                            <div className="flex items-center justify-between border-b border-white/[0.06] px-1">
                                 <div className="flex">
                                     {TABS.map((tab) => {
                                         const Icon = TAB_ICONS[tab];
                                         const count = tab === 'Flights' ? flights.length
                                             : tab === 'Satellites' ? sats.length
-                                                : cctvCameras.length;
+                                                : tab === 'Ships' ? ships.length
+                                                    : cctvCameras.length;
                                         return (
                                             <button
                                                 key={tab}
                                                 onClick={() => setActiveTab(tab)}
-                                                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-medium uppercase tracking-wider transition-colors border-b-2 ${activeTab === tab
-                                                    ? 'text-accent border-accent'
-                                                    : 'text-white/50 border-transparent hover:text-white/70'
+                                                className={`flex items-center gap-1.5 px-3 py-2 text-[8px] font-mono font-medium uppercase tracking-[0.15em] transition-colors border-b ${activeTab === tab
+                                                        ? 'text-cyan-300 border-cyan-400'
+                                                        : 'text-white/30 border-transparent hover:text-white/50'
                                                     }`}
                                             >
-                                                <Icon size={14} />
+                                                <Icon size={10} />
                                                 {tab}
                                                 {count > 0 && (
-                                                    <span className="ml-1 text-[10px] opacity-60">{count}</span>
+                                                    <span className={`text-[8px] ${activeTab === tab ? 'text-cyan-400/60' : 'text-white/20'}`}>
+                                                        {count}
+                                                    </span>
                                                 )}
                                             </button>
                                         );
@@ -150,71 +173,40 @@ export default function BottomPanel() {
                                 </div>
                                 <button
                                     onClick={toggleBottomPanel}
-                                    className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                    className="p-1 hover:bg-white/[0.04] rounded-sm transition-colors"
                                 >
-                                    <ChevronDown size={16} className="text-white/50" />
+                                    <ChevronDown size={12} className="text-white/30" />
                                 </button>
                             </div>
 
                             {/* Tab content */}
-                            <div className="flex-1 overflow-y-auto p-3">
+                            <div className="flex-1 overflow-y-auto p-2">
                                 {activeTab === 'Flights' && (
-                                    <div className="space-y-1">
-                                        {flights.length === 0 ? (
-                                            <div className="text-center py-8 text-white/20">
-                                                <Plane size={32} className="mx-auto mb-2" />
-                                                <p className="text-xs">Waiting for flight data...</p>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <p className="text-xs text-white/40 mb-2">
-                                                    Live Flights: {flights.length}
-                                                </p>
-                                                {flights.slice(0, 50).map((entry) => (
-                                                    <button
-                                                        key={entry.id}
-                                                        onClick={() => handleEntityClick(entry)}
-                                                        className="w-full glass-panel-light p-2 mb-1 flex items-center gap-3 cursor-pointer hover:bg-white/10 rounded-lg transition-colors text-left"
-                                                    >
-                                                        <Plane size={14} className={entry.type === 'military' ? 'text-orange-400' : 'text-white/60'} />
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="text-white text-sm font-medium truncate">{entry.label}</div>
-                                                            <div className="text-[10px] text-white/40 truncate">{entry.detail}</div>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </>
-                                        )}
-                                    </div>
+                                    <EntityList
+                                        entries={flights}
+                                        emptyIcon={Plane}
+                                        emptyText="AWAITING FLIGHT DATA"
+                                        onEntityClick={handleEntityClick}
+                                        iconColor={(e) => e.type === 'military' ? 'text-amber-400/70' : 'text-white/35'}
+                                    />
                                 )}
                                 {activeTab === 'Satellites' && (
-                                    <div className="space-y-1">
-                                        {sats.length === 0 ? (
-                                            <div className="text-center py-8 text-white/20">
-                                                <Satellite size={32} className="mx-auto mb-2" />
-                                                <p className="text-xs">Waiting for satellite data...</p>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <p className="text-xs text-white/40 mb-2">
-                                                    Active Satellites: {sats.length}
-                                                </p>
-                                                {sats.slice(0, 50).map((entry) => (
-                                                    <button
-                                                        key={entry.id}
-                                                        onClick={() => handleEntityClick(entry)}
-                                                        className="w-full glass-panel-light p-2 mb-1 flex items-center gap-3 cursor-pointer hover:bg-white/10 rounded-lg transition-colors text-left"
-                                                    >
-                                                        <Satellite size={14} className="text-white/60" />
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="text-white text-sm font-medium truncate">{entry.label}</div>
-                                                            <div className="text-[10px] text-white/40 truncate">{entry.detail}</div>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </>
-                                        )}
-                                    </div>
+                                    <EntityList
+                                        entries={sats}
+                                        emptyIcon={Satellite}
+                                        emptyText="AWAITING SATELLITE DATA"
+                                        onEntityClick={handleEntityClick}
+                                        iconColor={() => 'text-amber-400/50'}
+                                    />
+                                )}
+                                {activeTab === 'Ships' && (
+                                    <EntityList
+                                        entries={ships}
+                                        emptyIcon={Anchor}
+                                        emptyText="AWAITING AIS SHIP DATA"
+                                        onEntityClick={handleEntityClick}
+                                        iconColor={() => 'text-blue-400/60'}
+                                    />
                                 )}
                                 {activeTab === 'CCTV' && (
                                     <CctvThumbnailGrid cameras={cctvCameras} />
@@ -233,14 +225,61 @@ export default function BottomPanel() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                         onClick={toggleBottomPanel}
-                        className="fixed bottom-0 left-1/2 -translate-x-1/2 z-30 bg-black/40 backdrop-blur-md border border-white/10 border-b-0 rounded-t-xl px-6 py-1.5 hover:bg-white/10 transition-colors flex items-center gap-2 shadow-lg"
+                        className="fixed bottom-0 left-1/2 -translate-x-1/2 z-30 bg-black/60 backdrop-blur-sm border border-white/[0.06] border-b-0 rounded-t-sm px-4 py-1 hover:bg-white/[0.04] transition-colors flex items-center gap-2"
                         aria-label="Expand Data Panel"
                     >
-                        <ChevronUp size={16} className="text-white/70" />
-                        <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Data Streams</span>
+                        <ChevronUp size={12} className="text-white/40" />
+                        <span className="text-[7px] font-mono font-bold text-white/30 uppercase tracking-[0.2em]">DATA STREAMS</span>
                     </motion.button>
                 )}
             </AnimatePresence>
         </>
+    );
+}
+
+function EntityList({
+    entries, emptyIcon: Icon, emptyText, onEntityClick, iconColor,
+}: {
+    entries: EntityEntry[];
+    emptyIcon: React.ElementType;
+    emptyText: string;
+    onEntityClick: (e: EntityEntry) => void;
+    iconColor: (e: EntityEntry) => string;
+}) {
+    if (entries.length === 0) {
+        return (
+            <div className="text-center py-6 text-white/15">
+                <Icon size={20} className="mx-auto mb-1" />
+                <p className="text-[8px] font-mono tracking-wider">{emptyText}</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-0">
+            <div className="text-[7px] font-mono text-white/25 uppercase tracking-wider mb-1 px-1">
+                LIVE: {entries.length}
+            </div>
+            {entries.slice(0, 50).map((entry) => (
+                <button
+                    key={entry.id}
+                    onClick={() => onEntityClick(entry)}
+                    className="w-full flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-white/[0.04] transition-colors text-left"
+                >
+                    <Plane size={9} className={iconColor(entry)} />
+                    <div className="flex-1 min-w-0 flex items-center justify-between">
+                        <span className="text-[9px] font-mono text-white/60 truncate">{entry.label}</span>
+                        <span className="text-[8px] font-mono text-white/25 truncate ml-2">{entry.detail}</span>
+                    </div>
+                    {/* Status bar */}
+                    <div className="w-8 h-[2px] bg-white/[0.06] overflow-hidden">
+                        <div
+                            className="h-full bg-cyan-500/40"
+                            style={{ width: `${30 + Math.random() * 70}%` }}
+                        />
+                    </div>
+                </button>
+            ))}
+        </div>
     );
 }
