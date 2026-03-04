@@ -9,16 +9,16 @@ export default function ConnectionStatus() {
     const wsLatency = useUIStore((s) => s.wsLatency);
 
     return (
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded-button">
+        <div className="flex items-center gap-1.5 px-1.5 py-0.5">
             {isConnected ? (
                 <>
-                    <Wifi size={14} className="text-success" />
-                    <span className="text-xs text-white/60 font-mono">{wsLatency}ms</span>
+                    <Wifi size={10} className="text-green-400/70" />
+                    <span className="text-[8px] text-green-400/50 font-mono tracking-wider">{wsLatency}MS</span>
                 </>
             ) : (
                 <>
-                    <WifiOff size={14} className="text-danger" />
-                    <span className="text-xs text-danger/80">Offline</span>
+                    <WifiOff size={10} className="text-red-400/70" />
+                    <span className="text-[8px] text-red-400/60 font-mono tracking-wider">DISCONN</span>
                 </>
             )}
         </div>

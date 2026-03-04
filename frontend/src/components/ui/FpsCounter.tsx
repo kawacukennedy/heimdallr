@@ -29,11 +29,11 @@ export default function FpsCounter() {
     }, []);
 
     const color =
-        fps >= 50 ? 'text-success' : fps >= 30 ? 'text-warning' : 'text-danger';
+        fps >= 50 ? 'text-green-400/60' : fps >= 30 ? 'text-amber-400/60' : 'text-red-400/60';
 
     return (
-        <div className={`font-mono text-xs ${color}`}>
-            {fps} FPS
-        </div>
+        <span className={`font-mono text-[8px] tracking-wider ${color}`}>
+            {fps}FPS
+        </span>
     );
 }
