@@ -4,6 +4,8 @@ export const CHANNELS = {
     CIVILIAN_FLIGHTS: 'flights:civilian',
     MILITARY_FLIGHTS: 'flights:military',
     CCTV: 'cctv',
+    SHIPS_LIVE: 'ships:live',
+    GPS_JAMMING: 'gps:jamming',
 } as const;
 
 export const EVENTS = {
