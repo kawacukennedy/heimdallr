@@ -5,7 +5,7 @@ import { useCesiumContext } from '@/providers/CesiumProvider';
 import { useUIStore } from '@/store/uiStore';
 import { getSupabaseClient } from '@/lib/realtime/supabaseClient';
 import { CHANNELS } from '@/lib/realtime/channels';
-import type { FlightData, MilitaryFlightData } from '@/types';
+import type { FlightData, MilitaryFlightData, ShipData } from '@/types';
 
 export default function EntityLayers() {
     const { viewerRef, entityStoreRef } = useCesiumContext();
@@ -22,14 +22,14 @@ export default function EntityLayers() {
         const init = async () => {
             const Cesium = await import('cesium');
             cesiumRef.current = Cesium;
-            
+
             // Wait for viewer to be ready
             let attempts = 0;
             while (!viewerRef.current && attempts < 50) {
                 await new Promise(r => setTimeout(r, 100));
                 attempts++;
             }
-            
+
             if (viewerRef.current) {
                 cesiumReadyRef.current = true;
                 console.log('[EntityLayers] Cesium viewer ready, initializing layers...');
@@ -41,7 +41,7 @@ export default function EntityLayers() {
     // ==========================
     // Civilian Flights Layer
     // ==========================
-    
+
     // Store flight data for CallbackProperty access
     const flightDataRef = useRef<Map<string, FlightData>>(new Map());
 
@@ -56,7 +56,7 @@ export default function EntityLayers() {
             payload.forEach((flight) => {
                 // Store flight data for callback
                 flightDataRef.current.set(flight.icao24, flight);
-                
+
                 let entity = store.get(flight.icao24);
                 if (!entity) {
                     // Create CallbackProperty for dynamic position
@@ -67,7 +67,7 @@ export default function EntityLayers() {
                         }
                         return Cesium.Cartesian3.fromDegrees(flight.lon, flight.lat, flight.alt);
                     }, false);
-                    
+
                     entity = viewer.entities.add({
                         id: `civilian-${flight.icao24}`,
                         position: positionCallback,
@@ -100,7 +100,7 @@ export default function EntityLayers() {
                     }
                 }
             });
-            
+
             // Remove flights that are no longer in the data
             const currentIcaos = new Set(payload.map(f => f.icao24));
             store.forEach((entity, icao) => {
@@ -132,7 +132,7 @@ export default function EntityLayers() {
             payload.forEach((flight) => {
                 // Store flight data for callback
                 militaryFlightDataRef.current.set(flight.icao24, flight);
-                
+
                 let entity = store.get(flight.icao24);
                 if (!entity) {
                     // Determine model based on aircraft type
@@ -210,10 +210,10 @@ export default function EntityLayers() {
     useEffect(() => {
         if (workerInitializedRef.current) return;
         if (!cesiumReadyRef.current) return;
-        
+
         const Cesium = cesiumRef.current;
         const viewer = viewerRef.current;
-        
+
         if (!Cesium || !viewer) {
             // Cesium not ready yet
             return;
@@ -274,7 +274,7 @@ export default function EntityLayers() {
     // ==========================
     useEffect(() => {
         if (!cesiumReadyRef.current) return;
-        
+
         const Cesium = cesiumRef.current;
         const viewer = viewerRef.current;
         if (!Cesium || !viewer || !layers.satellites) return;
@@ -394,7 +394,7 @@ export default function EntityLayers() {
     // ==========================
     useEffect(() => {
         if (!cesiumReadyRef.current) return;
-        
+
         const Cesium = cesiumRef.current;
         const viewer = viewerRef.current;
         if (!Cesium || !viewer) return;
@@ -419,7 +419,7 @@ export default function EntityLayers() {
                     const lat = cam.location?.coordinates?.[1] ?? cam.lat ?? 0;
 
                     if (lon === 0 && lat === 0) return; // Skip invalid coordinates
-                    
+
                     // Skip if already exists
                     if (store.has(cam.id)) return;
 
@@ -515,7 +515,7 @@ export default function EntityLayers() {
     // ==========================
     useEffect(() => {
         if (!cesiumReadyRef.current) return;
-        
+
         const Cesium = cesiumRef.current;
         const viewer = viewerRef.current;
         if (!Cesium || !viewer || !layers.traffic) return;
@@ -623,6 +623,181 @@ export default function EntityLayers() {
     }, []);
 
     // ==========================
+    // Ships Layer (AIS Realtime)
+    // ==========================
+    const shipDataRef = useRef<Map<string, ShipData>>(new Map());
+
+    useEffect(() => {
+        if (!cesiumReadyRef.current) return;
+
+        const Cesium = cesiumRef.current;
+        const viewer = viewerRef.current;
+        if (!Cesium || !viewer) return;
+
+        const supabase = getSupabaseClient();
+        const store = entityStoreRef.current.ships;
+
+        const updateShips = (payload: ShipData[]) => {
+            const layerVisible = useUIStore.getState().layers.ships;
+            if (!payload || !Array.isArray(payload)) return;
+
+            payload.forEach((ship) => {
+                shipDataRef.current.set(ship.mmsi, ship);
+
+                let entity = store.get(ship.mmsi);
+                if (!entity) {
+                    const positionCallback = new Cesium.CallbackProperty(() => {
+                        const data = shipDataRef.current.get(ship.mmsi);
+                        if (data) {
+                            return Cesium.Cartesian3.fromDegrees(data.lon, data.lat, 0);
+                        }
+                        return Cesium.Cartesian3.fromDegrees(ship.lon, ship.lat, 0);
+                    }, false);
+
+                    entity = viewer.entities.add({
+                        id: `ship-${ship.mmsi}`,
+                        position: positionCallback,
+                        point: {
+                            pixelSize: 8,
+                            color: Cesium.Color.fromCssColorString('#0099FF'),
+                            outlineColor: Cesium.Color.fromCssColorString('#003366'),
+                            outlineWidth: 1,
+                            show: layerVisible,
+                        },
+                        label: {
+                            text: ship.name || ship.mmsi,
+                            show: false,
+                            font: '11px Inter, sans-serif',
+                            fillColor: Cesium.Color.fromCssColorString('#0099FF'),
+                            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                            outlineWidth: 2,
+                            outlineColor: Cesium.Color.BLACK,
+                            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                            pixelOffset: new Cesium.Cartesian2(0, -12),
+                            scale: 0.8,
+                        },
+                        properties: ship as any,
+                    });
+                    store.set(ship.mmsi, entity);
+                } else {
+                    if (entity.properties) {
+                        (entity as any).properties = ship;
+                    }
+                }
+            });
+
+            viewer.scene.requestRender();
+        };
+
+        const shipsChannel = supabase
+            .channel(CHANNELS.SHIPS_LIVE)
+            .on('broadcast', { event: 'update' }, (msg: any) => {
+                updateShips(msg.payload);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(shipsChannel);
+        };
+    }, [viewerRef, entityStoreRef]);
+
+    // ==========================
+    // GPS Jamming Layer
+    // ==========================
+    useEffect(() => {
+        if (!cesiumReadyRef.current) return;
+
+        const Cesium = cesiumRef.current;
+        const viewer = viewerRef.current;
+        if (!Cesium || !viewer) return;
+
+        const supabase = getSupabaseClient();
+        const store = entityStoreRef.current.gpsJammingZones;
+
+        // Load initial jamming zones from REST
+        const loadJammingZones = async () => {
+            try {
+                const backendUrl = process.env.NEXT_PUBLIC_API_URL || '';
+                const res = await fetch(`${backendUrl}/api/gps-jamming`);
+                if (!res.ok) return;
+                const zones = await res.json();
+                renderJammingZones(zones);
+            } catch (err) {
+                console.warn('[EntityLayers] Failed to load GPS jamming zones:', err);
+            }
+        };
+
+        const renderJammingZones = (zones: any[]) => {
+            const layerVisible = useUIStore.getState().layers.gpsJamming;
+
+            // Clear existing zones
+            store.forEach((entity) => viewer.entities.remove(entity));
+            store.clear();
+
+            zones.forEach((zone: any, idx: number) => {
+                const bounds = zone.bounds?.coordinates?.[0] || zone.bounds || [];
+                if (!Array.isArray(bounds) || bounds.length < 3) return;
+
+                const positions = Cesium.Cartesian3.fromDegreesArray(
+                    bounds.flatMap((coord: number[]) => [coord[0], coord[1]])
+                );
+
+                const severity = zone.severity || 0.5;
+                const alpha = 0.15 + severity * 0.35;
+
+                const entity = viewer.entities.add({
+                    id: `jamming-${zone.id || idx}`,
+                    polygon: {
+                        hierarchy: positions,
+                        material: Cesium.Color.RED.withAlpha(alpha),
+                        outline: true,
+                        outlineColor: Cesium.Color.RED.withAlpha(0.8),
+                        outlineWidth: 2,
+                        height: 0,
+                        show: layerVisible,
+                    },
+                    label: {
+                        text: `GPS JAMMING\n${zone.affected_aircraft || zone.affectedAircraft || 0} aircraft`,
+                        show: layerVisible,
+                        font: '10px Inter, sans-serif',
+                        fillColor: Cesium.Color.RED,
+                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        outlineWidth: 2,
+                        outlineColor: Cesium.Color.BLACK,
+                        verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+                        scale: 0.9,
+                    },
+                    properties: zone as any,
+                });
+                store.set(zone.id || `jamming-${idx}`, entity);
+            });
+
+            viewer.scene.requestRender();
+        };
+
+        loadJammingZones();
+
+        // Subscribe to real-time GPS jamming updates
+        const jammingChannel = supabase
+            .channel(CHANNELS.GPS_JAMMING)
+            .on('broadcast', { event: 'update' }, (msg: any) => {
+                renderJammingZones(msg.payload || []);
+            })
+            .subscribe();
+
+        // Refresh every 30 seconds
+        const refreshInterval = setInterval(loadJammingZones, 30000);
+
+        return () => {
+            clearInterval(refreshInterval);
+            supabase.removeChannel(jammingChannel);
+            store.forEach((entity) => viewer.entities.remove(entity));
+            store.clear();
+        };
+    }, [viewerRef, entityStoreRef]);
+
+    // ==========================
     // Layer visibility sync
     // ==========================
     useEffect(() => {
@@ -643,6 +818,13 @@ export default function EntityLayers() {
         store.roadParticles.forEach((entity) => {
             if (entity.polyline) entity.polyline.show = layers.traffic;
         });
+        store.ships.forEach((entity) => {
+            if (entity.point) entity.point.show = layers.ships;
+        });
+        store.gpsJammingZones.forEach((entity) => {
+            if (entity.polygon) entity.polygon.show = layers.gpsJamming;
+            if (entity.label) entity.label.show = layers.gpsJamming;
+        });
         viewerRef.current?.scene.requestRender();
     }, [layers, entityStoreRef, viewerRef]);
 
@@ -650,7 +832,7 @@ export default function EntityLayers() {
     // Entity click handler
     // ==========================
     const selectedOrbitRef = useRef<any>(null);
-    
+
     useEffect(() => {
         const viewer = viewerRef.current;
         const Cesium = cesiumRef.current;
@@ -670,7 +852,9 @@ export default function EntityLayers() {
                             ? 'satellite'
                             : entityId.includes('cctv')
                                 ? 'cctv'
-                                : null;
+                                : entityId.includes('ship')
+                                    ? 'ship'
+                                    : null;
                 selectEntity(entityId, type);
 
                 // Show label on selected entity
@@ -678,7 +862,7 @@ export default function EntityLayers() {
                 if (entity.label) {
                     entity.label.show = true;
                 }
-                
+
                 // For satellites, show orbit path
                 if (type === 'satellite') {
                     const props = entity.properties;
@@ -686,12 +870,12 @@ export default function EntityLayers() {
                     const lat = props?.lat || 0;
                     const lon = props?.lon || 0;
                     const height = props?.height || 400;
-                    
+
                     // Remove previous orbit
                     if (selectedOrbitRef.current) {
                         viewer.entities.remove(selectedOrbitRef.current);
                     }
-                    
+
                     // Draw orbit circle at satellite altitude
                     const orbitRadius = height * 1000; // Convert km to meters
                     const orbitPositions = [];
@@ -699,7 +883,7 @@ export default function EntityLayers() {
                         const rad = (i * Math.PI) / 180;
                         orbitPositions.push(Cesium.Cartesian3.fromRadians(rad, 0, orbitRadius));
                     }
-                    
+
                     selectedOrbitRef.current = viewer.entities.add({
                         id: `orbit-${entityId}`,
                         polyline: {
@@ -711,7 +895,7 @@ export default function EntityLayers() {
                             }),
                         },
                     });
-                    
+
                     console.log(`[EntityLayers] Showing orbit for ${satName} at ${height}km`);
                 } else {
                     // Remove orbit when clicking non-satellite
