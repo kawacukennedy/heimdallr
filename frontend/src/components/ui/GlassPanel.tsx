@@ -11,13 +11,12 @@ interface GlassPanelProps {
     onClick?: () => void;
 }
 
-const blurMap = { low: '10px', medium: '20px', high: '30px' };
+const blurMap = { low: '8px', medium: '12px', high: '20px' };
 const shadowMap = {
-    low: '0 2px 8px rgba(0,0,0,0.3)',
-    medium: '0 10px 30px -10px rgba(0,0,0,0.5)',
-    high: '0 20px 40px -10px rgba(0,0,0,0.7)',
+    low: '0 0 1px rgba(0,229,255,0.08), 0 2px 10px -4px rgba(0,0,0,0.6)',
+    medium: '0 0 1px rgba(0,229,255,0.12), 0 4px 20px -6px rgba(0,0,0,0.7)',
+    high: '0 0 2px rgba(0,229,255,0.15), 0 10px 30px -8px rgba(0,0,0,0.85)',
 };
-const roundedMap = { sm: '8px', panel: '12px', lg: '16px', xl: '20px' };
 
 export default function GlassPanel({
     children,
@@ -30,13 +29,14 @@ export default function GlassPanel({
     return (
         <div
             onClick={onClick}
-            className={`border border-white/10 ${className}`}
+            className={`border border-white/[0.06] ${className}`}
             style={{
-                background: 'rgba(30, 30, 40, 0.8)',
+                background: 'rgba(8, 12, 18, 0.92)',
                 backdropFilter: `blur(${blurMap[elevation]})`,
                 WebkitBackdropFilter: `blur(${blurMap[elevation]})`,
                 boxShadow: shadowMap[elevation],
-                borderRadius: roundedMap[rounded],
+                borderRadius: '2px',
+                borderColor: 'rgba(60, 80, 100, 0.35)',
                 ...style,
             }}
         >
