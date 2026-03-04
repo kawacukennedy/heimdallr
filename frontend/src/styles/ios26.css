@@ -1,56 +1,57 @@
-/* ios26.css — iOS 26 Design Tokens & Glassmorphic Effects */
+/* ios26.css — Tactical Intelligence Design Tokens */
 
 :root {
-    /* === Colors === */
-    --color-background: rgba(20, 20, 30, 0.7);
-    --color-surface: rgba(30, 30, 40, 0.8);
-    --color-surface-light: rgba(50, 50, 60, 0.9);
-    --color-border: rgba(255, 255, 255, 0.2);
-    --color-text-primary: #ffffff;
-    --color-text-secondary: rgba(255, 255, 255, 0.7);
-    --color-accent: #0a84ff;
-    --color-accent-glow: #409cff;
+    /* === Colors — Tactical palette === */
+    --color-background: rgba(8, 12, 18, 0.92);
+    --color-surface: rgba(12, 18, 26, 0.9);
+    --color-surface-light: rgba(20, 28, 40, 0.85);
+    --color-border: rgba(60, 80, 100, 0.35);
+    --color-text-primary: #d0d8e0;
+    --color-text-secondary: rgba(160, 180, 200, 0.65);
+    --color-accent: #00e5ff;
+    --color-accent-glow: #33f0ff;
+    --color-amber: #c8a64b;
     --color-success: #30d158;
-    --color-warning: #ff9f0a;
+    --color-warning: #c8a64b;
     --color-danger: #ff453a;
     --color-night-vision: #7cfc00;
     --color-thermal-hot: #ff4500;
 
-    /* === Typography === */
-    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    --font-headline: 600 18px/24px var(--font-family);
-    --font-body: 400 14px/20px var(--font-family);
-    --font-caption: 400 12px/16px var(--font-family);
+    /* === Typography — Monospace first === */
+    --font-family: 'JetBrains Mono', 'Inter', -apple-system, monospace;
+    --font-headline: 600 14px/20px var(--font-family);
+    --font-body: 400 11px/16px var(--font-family);
+    --font-caption: 400 9px/12px var(--font-family);
 
     /* === Spacing === */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-xxl: 48px;
+    --space-xs: 3px;
+    --space-sm: 6px;
+    --space-md: 12px;
+    --space-lg: 18px;
+    --space-xl: 24px;
+    --space-xxl: 36px;
 
-    /* === Border Radius === */
-    --radius-panel: 12px;
-    --radius-button: 8px;
-    --radius-card: 10px;
+    /* === Border Radius — Sharp tactical === */
+    --radius-panel: 2px;
+    --radius-button: 2px;
+    --radius-card: 2px;
     --radius-circle: 9999px;
 
     /* === Blur === */
-    --blur-panel: blur(20px);
-    --blur-modal: blur(30px);
-    --blur-heavy: blur(40px);
+    --blur-panel: blur(12px);
+    --blur-modal: blur(20px);
+    --blur-heavy: blur(30px);
 
     /* === Shadows === */
-    --shadow-panel: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-    --shadow-modal: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
-    --shadow-button: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-panel: 0 0 1px rgba(0, 229, 255, 0.1), 0 4px 20px -6px rgba(0, 0, 0, 0.7);
+    --shadow-modal: 0 0 2px rgba(0, 229, 255, 0.15), 0 20px 40px -10px rgba(0, 0, 0, 0.9);
+    --shadow-button: 0 1px 4px rgba(0, 0, 0, 0.4);
 
     /* === Animation === */
     --ease-spring: cubic-bezier(0.2, 0.9, 0.3, 1.2);
-    --duration-fast: 0.15s;
-    --duration-normal: 0.3s;
-    --duration-slow: 0.5s;
+    --duration-fast: 0.1s;
+    --duration-normal: 0.2s;
+    --duration-slow: 0.4s;
 
     /* === Z-Index === */
     --z-base: 0;
@@ -61,7 +62,7 @@
     --z-tooltip: 200;
 }
 
-/* === Glass Panel Mixin === */
+/* === Glass Panel === */
 .glass-panel {
     background: var(--color-background);
     backdrop-filter: var(--blur-panel);
@@ -82,34 +83,26 @@
 
 /* === Glow Effects === */
 .glow-accent {
-    box-shadow: 0 0 20px rgba(10, 132, 255, 0.3),
-        0 0 60px rgba(10, 132, 255, 0.1),
-        inset 0 0 20px rgba(10, 132, 255, 0.05);
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.3),
+        0 0 40px rgba(0, 229, 255, 0.08);
 }
 
 .glow-success {
-    box-shadow: 0 0 15px rgba(48, 209, 88, 0.3);
+    box-shadow: 0 0 12px rgba(48, 209, 88, 0.3);
 }
 
 .glow-danger {
-    box-shadow: 0 0 15px rgba(255, 69, 58, 0.3);
+    box-shadow: 0 0 12px rgba(255, 69, 58, 0.3);
 }
 
 .glow-warning {
-    box-shadow: 0 0 15px rgba(255, 159, 10, 0.3);
+    box-shadow: 0 0 12px rgba(200, 166, 75, 0.3);
 }
 
 /* === Animated Border === */
 @keyframes border-glow {
-
-    0%,
-    100% {
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    50% {
-        border-color: rgba(10, 132, 255, 0.4);
-    }
+    0%, 100% { border-color: rgba(60, 80, 100, 0.25); }
+    50% { border-color: rgba(0, 229, 255, 0.35); }
 }
 
 .animated-border {
@@ -118,14 +111,14 @@
 
 /* === Frosted Overlay === */
 .frosted-overlay {
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 /* === Scroll styling === */
 .ios-scroll::-webkit-scrollbar {
-    width: 4px;
+    width: 3px;
 }
 
 .ios-scroll::-webkit-scrollbar-track {
@@ -133,12 +126,12 @@
 }
 
 .ios-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 2px;
+    background: rgba(0, 229, 255, 0.15);
+    border-radius: 0;
 }
 
 .ios-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(0, 229, 255, 0.3);
 }
 
 /* === Shader Theme Overrides === */
