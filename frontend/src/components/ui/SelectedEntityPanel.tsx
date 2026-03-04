@@ -149,11 +149,11 @@ export default function SelectedEntityPanel() {
                             {details.details.map((detail, idx) => (
                                 <div key={idx} className="flex justify-between items-center">
                                     <span className="text-[8px] font-mono text-white/30 uppercase tracking-wider">
-                                        {detail.label}
+                                        {String(detail.label)}
                                     </span>
                                     {detail.isLink ? (
                                         <a
-                                            href={detail.value}
+                                            href={String(detail.value)}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-[9px] font-mono text-cyan-400 hover:underline"
@@ -161,7 +161,11 @@ export default function SelectedEntityPanel() {
                                             VIEW FEED
                                         </a>
                                     ) : (
-                                        <span className="text-[9px] font-mono text-white/65">{detail.value}</span>
+                                        <span className="text-[9px] font-mono text-white/65">
+                                            {typeof detail.value === 'object' && detail.value !== null
+                                                ? JSON.stringify(detail.value)
+                                                : String(detail.value)}
+                                        </span>
                                     )}
                                 </div>
                             ))}

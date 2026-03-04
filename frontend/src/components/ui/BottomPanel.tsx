@@ -51,20 +51,20 @@ export default function BottomPanel() {
         const flightEntries: EntityEntry[] = [];
         store.civilianFlights.forEach((entity, id) => {
             const props = entity.properties;
-            const callsign = props?.callsign ?? props?._callsign ?? id;
-            const alt = props?.alt ?? props?._alt ?? '—';
-            const velocity = props?.velocity ?? props?._velocity ?? '—';
+            const callsign = String(props?.callsign ?? props?._callsign ?? id);
+            const alt = String(props?.alt ?? props?._alt ?? '—');
+            const velocity = String(props?.velocity ?? props?._velocity ?? '—');
             flightEntries.push({
                 id: entity.id || `civilian-${id}`,
-                label: String(callsign),
+                label: callsign,
                 detail: `${alt}m · ${velocity}m/s`,
                 type: 'flight',
             });
         });
         store.militaryFlights.forEach((entity, id) => {
             const props = entity.properties;
-            const callsign = props?.callsign ?? props?._callsign ?? id;
-            const alt = props?.alt ?? props?._alt ?? '—';
+            const callsign = String(props?.callsign ?? props?._callsign ?? id);
+            const alt = String(props?.alt ?? props?._alt ?? '—');
             flightEntries.push({
                 id: entity.id || `military-${id}`,
                 label: `⚔ ${callsign}`,
@@ -78,12 +78,12 @@ export default function BottomPanel() {
         const satEntries: EntityEntry[] = [];
         store.satellites.forEach((entity, id) => {
             const props = entity.properties;
-            const name = props?.name ?? props?._name ?? id;
+            const name = String(props?.name ?? props?._name ?? id);
             const height = props?.height ?? props?._height ?? '—';
             satEntries.push({
                 id: entity.id || id,
-                label: String(name),
-                detail: `${typeof height === 'number' ? height.toFixed(0) : height}km`,
+                label: name,
+                detail: `${typeof height === 'number' ? height.toFixed(0) : String(height)}km`,
                 type: 'satellite',
             });
         });
@@ -105,12 +105,12 @@ export default function BottomPanel() {
         if (store.ships) {
             store.ships.forEach((entity: any, id: string) => {
                 const props = entity.properties;
-                const name = props?.name ?? props?._name ?? id;
-                const speed = props?.speed ?? props?._speed ?? '—';
-                const dest = props?.destination ?? props?._destination ?? '—';
+                const name = String(props?.name ?? props?._name ?? id);
+                const speed = String(props?.speed ?? props?._speed ?? '—');
+                const dest = String(props?.destination ?? props?._destination ?? '—');
                 shipEntries.push({
                     id: entity.id || `ship-${id}`,
-                    label: String(name),
+                    label: name,
                     detail: `${speed}kn · ${dest}`,
                     type: 'ship',
                 });
@@ -156,8 +156,8 @@ export default function BottomPanel() {
                                                 key={tab}
                                                 onClick={() => setActiveTab(tab)}
                                                 className={`flex items-center gap-1.5 px-3 py-2 text-[8px] font-mono font-medium uppercase tracking-[0.15em] transition-colors border-b ${activeTab === tab
-                                                        ? 'text-cyan-300 border-cyan-400'
-                                                        : 'text-white/30 border-transparent hover:text-white/50'
+                                                    ? 'text-cyan-300 border-cyan-400'
+                                                    : 'text-white/30 border-transparent hover:text-white/50'
                                                     }`}
                                             >
                                                 <Icon size={10} />
@@ -268,8 +268,12 @@ function EntityList({
                 >
                     <Plane size={9} className={iconColor(entry)} />
                     <div className="flex-1 min-w-0 flex items-center justify-between">
-                        <span className="text-[9px] font-mono text-white/60 truncate">{entry.label}</span>
-                        <span className="text-[8px] font-mono text-white/25 truncate ml-2">{entry.detail}</span>
+                        <span className="text-[9px] font-mono text-white/60 truncate">
+                            {typeof entry.label === 'object' && entry.label !== null ? JSON.stringify(entry.label) : String(entry.label)}
+                        </span>
+                        <span className="text-[8px] font-mono text-white/25 truncate ml-2">
+                            {typeof entry.detail === 'object' && entry.detail !== null ? JSON.stringify(entry.detail) : String(entry.detail)}
+                        </span>
                     </div>
                     {/* Status bar */}
                     <div className="w-8 h-[2px] bg-white/[0.06] overflow-hidden">
