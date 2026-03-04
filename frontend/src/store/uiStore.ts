@@ -45,6 +45,12 @@ interface UIState {
     settings: AppSettings;
     updateSettings: (settings: Partial<AppSettings>) => void;
 
+    // Playback
+    playbackMode: boolean;
+    playbackTimeRange: { start: string; end: string } | null;
+    setPlaybackMode: (enabled: boolean) => void;
+    setPlaybackTimeRange: (range: { start: string; end: string } | null) => void;
+
     // Connection status
     isConnected: boolean;
     wsLatency: number;
